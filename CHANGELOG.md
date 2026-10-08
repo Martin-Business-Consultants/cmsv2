@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.2.1
+
 ### Changed
 - **Releases come from `Martin-Business-Consultants/cmsv2`**, now public:
   the daily update check reads them there (`CMS_RELEASES_REPO` still points
