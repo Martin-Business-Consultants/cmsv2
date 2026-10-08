@@ -1,0 +1,7 @@
+# The plugins every install gets at setup — bin/setup, bin/install and the
+# Docker build (bin/fetch-plugins) — as `directory name: git URL[#ref]`. They
+# are plugins like any other, so an install can go without one or swap it
+# for another: remove it with `bin/rails "plugins:remove[forms]"`, or on
+# Docker list `-forms` in CMS_PLUGINS (docs/plugins.md).
+forms: https://github.com/Martin-Business-Consultants/cms-forms
+media: https://github.com/Martin-Business-Consultants/cms-media
