@@ -94,8 +94,8 @@ out.
   Active Record encryption takes `AR_ENCRYPTION_*` or derives from
   `SECRET_KEY_BASE`. A site moved from the old shared install sets
   `SECRET_KEY_BASE` to that install's.
-- The daily update check reads releases from
-  `Martin-Business-Consultants/opencms`.
+- The daily update check reads the CMS's releases from GitHub
+  (`CMS_RELEASES_REPO`).
 - **The admin is laid out like WordPress's.** A dark admin menu down the left
   (top-level items with icons, in groups, the current one open with its
   submenu, the others flying out on hover and keyboard focus; folds to icons;
