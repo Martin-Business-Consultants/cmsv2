@@ -72,6 +72,36 @@ out.
   answers reads and writes with `X-Lock-Version` and refuses a write that
   sends an older `lock_version` with 409 (docs/agent-interface.md). A write
   that sends none is applied as before.
+### Added
+- **A backup every night, and a way to copy it off the server.** The whole
+  data directory is archived at 2am, kept with the update backups
+  (`CMS_BACKUP_KEEP`), and handed to `CMS_BACKUP_COMMAND` when one is set
+  (`rclone`, `aws s3 cp`, `scp`: it gets the archive's path). A failed copy
+  fails the job. `CMS_BACKUP_NIGHTLY=false` turns it off.
+- **Versions are kept to the newest 100 per page and entry** (`CMS_VERSIONS_KEEP`);
+  older ones are deleted nightly.
+
+### Fixed
+- **Backups are checked before anything trusts them.** Each database in a
+  data backup is checked (`PRAGMA quick_check`) and a copy that stops short
+  fails the backup, so an update never migrates on the strength of one that
+  wouldn't restore. Before, a copy that hit a lock was archived as it was.
+- **Tools › Backup's download is a consistent snapshot**, taken with SQLite's
+  online backup instead of reading the live file, and fails rather than
+  shipping without its database. It's built on disk and streamed, not held
+  in memory, and its manifest names any uploaded file that was missing
+  instead of leaving it out without a word.
+- **A person who ever edited a page or entry can be deleted.** Their
+  versions keep their content and lose their author; before, the delete
+  failed. Likewise a category entry other entries use can be purged from the
+  trash (they become uncategorized), and a collection another one draws its
+  categories or tags from can be deleted.
+- **The nightly trash purge keeps going past a record it can't delete**,
+  reporting it, instead of stopping there every night; a purge is recorded
+  only once the record is gone, and deleting several collections is all or
+  nothing.
+- **A redirect import reads its CSV a row at a time** and refuses one over
+  5 MB (`413` from `/api/redirects/import`).
 
 ## 1.5.4
 

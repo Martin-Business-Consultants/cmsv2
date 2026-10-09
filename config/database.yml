@@ -2,6 +2,13 @@
 # file for this site lives under CMS_DATA_DIR (default storage/), so backing
 # up that directory backs up the install.
 
+#
+# One writer at a time is SQLite's rule; Rails 8.1 makes waiting for it cheap.
+# `timeout` is the adapter's busy_handler_timeout: a connection that finds the
+# database locked retries for up to that long, without holding Ruby's global
+# lock, instead of failing with SQLite3::BusyException. Transactions begin
+# IMMEDIATE, so a reader never fails trying to become a writer mid-transaction,
+# and the database runs in WAL mode, so readers never wait on the writer.
 default: &default
   adapter: sqlite3
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

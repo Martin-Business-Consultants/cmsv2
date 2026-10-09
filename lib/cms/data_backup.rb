@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "shellwords"
 require "sqlite3"
 require "tmpdir"
 require "time"
@@ -14,24 +15,35 @@ module Cms
   # which would make every boot after an update copy gigabytes before the
   # site comes up. Databases are copied with SQLite's
   # online backup API, so a copy taken while the app is running is consistent
-  # (WAL included); everything else is copied as files.
+  # (WAL included), and each copy is checked (PRAGMA quick_check) before it
+  # goes in the archive; everything else is copied as files.
+  #
+  # Nightly (DataBackupJob) it takes one more, and hands it to
+  # CMS_BACKUP_COMMAND, if set, to copy off the server: the command is run
+  # with the archive's path as its last argument (`rclone copyto`, `aws s3
+  # cp`, `scp` — whatever the install has), and a non-zero exit fails the job.
   #
   # Plain Ruby — no Rails — so bin/update and bin/docker-entrypoint can run it
   # before the new code boots.
   #
   #   Cms::DataBackup.new(data_dir: "/var/lib/cms").call  # => "/var/lib/cms/backups/cms-data-20260927-120000.tar.gz"
   class DataBackup
+    # Raised when a database can't be copied whole, or its copy doesn't check out.
+    CopyFailed = Class.new(StandardError)
+
     DEFAULT_KEEP = 5
+    BUSY_TIMEOUT_MS = 10_000
     SQLITE_SIDECARS = /-(wal|shm|journal)\z/
     # Directories in the data directory a backup leaves out (besides its own).
     REFETCHABLE = %w[releases site_imports].freeze
 
-    attr_reader :data_dir, :backup_dir, :keep
+    attr_reader :data_dir, :backup_dir, :keep, :command
 
-    def initialize(data_dir:, backup_dir: nil, keep: nil)
+    def initialize(data_dir:, backup_dir: nil, keep: nil, command: nil)
       @data_dir   = File.expand_path(data_dir)
       @backup_dir = File.expand_path(backup_dir || File.join(@data_dir, "backups"))
       @keep       = (keep || DEFAULT_KEEP).to_i
+      @command    = command.to_s.strip.empty? ? nil : command
     end
 
     # The archive's path, or nil when there is nothing to back up yet (a fresh
@@ -50,6 +62,21 @@ module Cms
 
       prune!
       archive
+    end
+
+    # The nightly backup: an archive, copied off the server by
+    # CMS_BACKUP_COMMAND when one is set. Returns the archive, or nil for a
+    # fresh install. Raises when either step fails.
+    def nightly
+      call&.tap { ship(it) }
+    end
+
+    # Runs CMS_BACKUP_COMMAND with the archive's path as its last argument.
+    # False when there's no command; raises when the command fails.
+    def ship(archive)
+      return false unless command
+
+      system(*Shellwords.split(command), archive, exception: true)
     end
 
     # A backup only when this boot will migrate: the primary database lacks a
@@ -75,7 +102,7 @@ module Cms
     def self.for_install(env = ENV)
       value = ->(name) { env[name].to_s.strip.empty? ? nil : env[name] }
       new(data_dir: value.("CMS_DATA_DIR") || File.expand_path("../../storage", __dir__),
-        backup_dir: value.("CMS_BACKUP_DIR"), keep: value.("CMS_BACKUP_KEEP"))
+        backup_dir: value.("CMS_BACKUP_DIR"), keep: value.("CMS_BACKUP_KEEP"), command: value.("CMS_BACKUP_COMMAND"))
     end
 
     Archive = Struct.new(:name, :path, :byte_size, :taken_at, keyword_init: true)
@@ -125,12 +152,20 @@ module Cms
       end
     end
 
+    # Copies one database with SQLite's online backup and checks the copy.
+    # Raises rather than archiving a partial or damaged copy: an update must
+    # not migrate on the strength of a backup that wouldn't restore.
     def backup_database(source, destination)
       from = SQLite3::Database.new(source, readonly: true)
+      from.busy_timeout = BUSY_TIMEOUT_MS
       to = SQLite3::Database.new(destination)
       backup = SQLite3::Backup.new(to, "main", from, "main")
-      backup.step(-1)
+      result = backup.step(-1)
       backup.finish
+      raise CopyFailed, "#{File.basename(source)}: the copy stopped (SQLite result #{result})" unless result == SQLite3::Constants::ErrorCode::DONE
+
+      check = to.get_first_value("PRAGMA quick_check")
+      raise CopyFailed, "#{File.basename(source)}: the copy doesn't check out (#{check})" unless check == "ok"
     ensure
       to&.close
       from&.close

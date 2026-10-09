@@ -12,5 +12,7 @@ class PageVersion < ApplicationRecord
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
 
+  def self.versioned_association = :page
+
   def versioned_record = page
 end

@@ -11,5 +11,7 @@ class CollectionEntryVersion < ApplicationRecord
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
 
+  def self.versioned_association = :collection_entry
+
   def versioned_record = collection_entry
 end

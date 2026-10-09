@@ -17,6 +17,9 @@ class Api::Tools::BackupsController < Api::BaseController
 
   def create
     backup = SiteBackup.new
-    send_data backup.export, filename: backup.filename, type: "application/gzip", disposition: "attachment"
+    download = backup.export
+    send_file_headers! filename: backup.filename, type: "application/gzip", disposition: "attachment"
+    response.headers["Content-Length"] = download.bytesize.to_s
+    self.response_body = download
   end
 end

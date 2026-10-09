@@ -55,6 +55,41 @@ RSpec.describe Cms::DataBackup do
     expect(described_class.new(data_dir: data_dir).call).to be_nil
   end
 
+  it "refuses to archive a database it couldn't copy whole" do
+    SQLite3::Database.new(data_dir.join("production.sqlite3").to_s).close
+    allow_any_instance_of(SQLite3::Backup).to receive(:step).and_return(SQLite3::Constants::ErrorCode::BUSY)
+
+    expect { described_class.new(data_dir: data_dir).call }.to raise_error(Cms::DataBackup::CopyFailed, /production.sqlite3/)
+    expect(Dir.glob(data_dir.join("backups/*.tar.gz").to_s)).to be_empty
+  end
+
+  describe "nightly, copied off the server" do
+    before { SQLite3::Database.new(data_dir.join("production.sqlite3").to_s).close }
+
+    it "hands the archive to CMS_BACKUP_COMMAND as its last argument" do
+      shipped = data_dir.join("shipped.txt")
+      archive = described_class.new(data_dir: data_dir, command: "sh -c 'echo \"$0\" > #{shipped}'").nightly
+
+      expect(shipped.read.strip).to eq(archive)
+    end
+
+    it "fails when the command does" do
+      expect { described_class.new(data_dir: data_dir, command: "false").nightly }.to raise_error(RuntimeError)
+    end
+
+    it "only archives without a command" do
+      backup = described_class.new(data_dir: data_dir)
+
+      expect(backup.nightly).to end_with(".tar.gz")
+      expect(backup.ship("anything")).to be(false)
+    end
+
+    it "reads the command from the environment" do
+      expect(described_class.for_install("CMS_DATA_DIR" => data_dir.to_s, "CMS_BACKUP_COMMAND" => "rclone copy").command).to eq("rclone copy")
+      expect(described_class.for_install("CMS_DATA_DIR" => data_dir.to_s, "CMS_BACKUP_COMMAND" => " ").command).to be_nil
+    end
+  end
+
   describe "on boot, only when migrations are pending" do
     let(:migrations) { Pathname(Dir.mktmpdir("migrations")).tap { it.join("20260101000000_one.rb").write(""); it.join("20260202000000_two.rb").write("") } }
 

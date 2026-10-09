@@ -21,6 +21,9 @@ checkout with `bin/install`.
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | The sender of the install's own mail (password resets, invitations), and the fallback for the site's. Default `noreply@<APP_HOST>`, `LibrePublish`. |
 | `APP_PROTOCOL` | `https` (default) or `http`, for links. |
 | `CMS_BACKUP_KEEP`, `CMS_BACKUP_DIR` | How many data backups to keep (5) and where (`$CMS_DATA_DIR/backups`). |
+| `CMS_BACKUP_COMMAND` | Copies each nightly backup off the server: run with the archive's path as its last argument (`rclone copyto --s3-no-check-bucket`, `aws s3 cp … s3://bucket/`, `scp … host:dir/`). Unset, backups stay on the server. |
+| `CMS_BACKUP_NIGHTLY` | `false` stops the nightly backup, for an install whose host snapshots the volume instead. |
+| `CMS_VERSIONS_KEEP` | How many versions of each page and entry to keep (100); older ones are deleted nightly. |
 | `ASSUME_SSL` | `true` behind a proxy that terminates TLS (Cloudflare, a load balancer). |
 | `CMS_ALLOW_PRIVATE_WEBHOOKS` | `true` lets webhooks, build hooks and a site's purge URL point at private, loopback or link-local addresses — for an install whose receivers are on its own network. Off by default (on while developing). |
 | `CMS_PLUGINS` | The install's plugins, for a Docker build (see Plugins below). |
@@ -157,16 +160,20 @@ remove or rename them only in a later one, once nothing reads them.
 
 `bin/rails cms:backup` writes `backups/cms-data-<time>.tar.gz` in the data
 directory: every database (copied with SQLite's online backup, so it's
-consistent while the app runs) and every uploaded file, keeping the newest
-five. bin/update and every container boot take one. Tools › Backup lists them
-for anyone with `tools:use` to download. Copy them off the server with the
-install's secrets — a backup without its `SECRET_KEY_BASE` can't decrypt its
-tokens.
+consistent while the app runs, and checked with `PRAGMA quick_check` before
+it's archived) and every uploaded file, keeping the newest five. bin/update
+and a container boot that will migrate take one, and a migration doesn't run
+if it fails. One is also taken every night at 2am (`CMS_BACKUP_NIGHTLY=false`
+turns that off), and handed to `CMS_BACKUP_COMMAND` to copy off the server
+when one is set; a failed copy fails the job. Tools › Backup lists them for
+anyone with `tools:use` to download. Keep the install's secrets with them — a
+backup without its `SECRET_KEY_BASE` can't decrypt its tokens.
 
 To restore: stop the app, move the data directory aside, unpack the archive
 into an empty one (`tar -xzf cms-data-….tar.gz -C "$CMS_DATA_DIR"`), start the
-app. Tools › Backup is a different thing: a portable JSON export of the
-content.
+app. Tools › Backup's download is a different thing: the primary database
+and the uploaded files as one portable `.tar.gz`, with a manifest naming any
+file that was missing.
 
 ## Releasing
 
