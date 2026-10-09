@@ -12,7 +12,6 @@ module Webhook::Deliverable
   extend ActiveSupport::Concern
 
   PAYLOAD_TRUNCATE  = 16_000
-  RESPONSE_TRUNCATE = 4_000
   OPEN_TIMEOUT      = 5
   READ_TIMEOUT      = 10
 
@@ -40,7 +39,7 @@ module Webhook::Deliverable
 
     body = JSON.generate(envelope(event, payload))
     started = monotonic_ms
-    response, error = post(URI.parse(url), body)
+    response, error = post(body)
     success = response.is_a?(Net::HTTPSuccess)
 
     record_delivery(event: event, body: body, response: response, error: error,
@@ -65,11 +64,10 @@ module Webhook::Deliverable
     "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, body)}"
   end
 
-  def post(uri, body)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = (uri.scheme == "https")
-    http.open_timeout = OPEN_TIMEOUT
-    http.read_timeout = READ_TIMEOUT
+  # To the address OutboundUrl checked; a URL that now resolves somewhere
+  # private is a failed delivery, not a request.
+  def post(body)
+    uri, http = OutboundUrl.connect(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
 
     request = Net::HTTP::Post.new(uri.request_uri, {
       "Content-Type"    => "application/json",
@@ -88,7 +86,6 @@ module Webhook::Deliverable
       event:           event,
       payload:         body.to_s.first(PAYLOAD_TRUNCATE),
       response_status: response&.code&.to_i,
-      response_body:   response&.body.to_s.first(RESPONSE_TRUNCATE),
       error:           error,
       duration_ms:     duration,
       success:         success,

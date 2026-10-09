@@ -102,4 +102,34 @@ RSpec.describe Webhook::Deliverable do
         .to have_enqueued_job(Webhook::DeliveryJob).exactly(:once).with(webhook.id, "page.published", {id: 7})
     end
   end
+
+  it "keeps the receiver's status, not its body" do
+    stub_post
+
+    webhook.deliver_now("page.published", {})
+
+    expect(WebhookDelivery.last).not_to respond_to(:response_body)
+    expect(WebhookDelivery.last.response_status).to eq(200)
+  end
+
+  it "refuses to send to a URL that now resolves inside the network, and records why" do
+    webhook
+    OutboundUrl.resolver = ->(_host) { ["10.0.0.7"] }
+    expect_any_instance_of(Net::HTTP).not_to receive(:request)
+
+    webhook.deliver_now("page.published", {})
+
+    delivery = WebhookDelivery.last
+    expect(delivery.success).to be(false)
+    expect(delivery.error).to match(/OutboundUrl::Unsafe.*private or local/)
+  end
+
+  it "connects to the address it checked" do
+    stub_post
+    expect_any_instance_of(Net::HTTP).to receive(:ipaddr=).with("203.0.113.10").and_call_original
+
+    webhook.deliver_now("page.published", {})
+
+    expect(WebhookDelivery.last.success).to be(true)
+  end
 end

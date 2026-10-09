@@ -19,11 +19,7 @@ class Deploys::BuildHook < Deploys::Provider
   end
 
   def fire(reason:, changes: [])
-    uri  = URI.parse(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = (uri.scheme == "https")
-    http.open_timeout = OPEN_TIMEOUT
-    http.read_timeout = READ_TIMEOUT
+    uri, http = OutboundUrl.connect(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
     request = Net::HTTP::Post.new(uri.request_uri, {"User-Agent" => "mbc-cms-deploy/1"})
     attempt_from(http.request(request), nil)
   rescue StandardError => e

@@ -22,6 +22,7 @@ checkout with `bin/install`.
 | `APP_PROTOCOL` | `https` (default) or `http`, for links. |
 | `CMS_BACKUP_KEEP`, `CMS_BACKUP_DIR` | How many data backups to keep (5) and where (`$CMS_DATA_DIR/backups`). |
 | `ASSUME_SSL` | `true` behind a proxy that terminates TLS (Cloudflare, a load balancer). |
+| `CMS_ALLOW_PRIVATE_WEBHOOKS` | `true` lets webhooks, build hooks and a site's purge URL point at private, loopback or link-local addresses — for an install whose receivers are on its own network. Off by default (on while developing). |
 | `CMS_PLUGINS` | The install's plugins, for a Docker build (see Plugins below). |
 | `CMS_RELEASES_REPO`, `CMS_RELEASES_TOKEN` | Where the daily update check looks (default `Martin-Business-Consultants/cmsv2`), and a token if that repo is private. |
 | `CMS_UPDATE_CHECK` | `false` stops the daily check for a newer release. |

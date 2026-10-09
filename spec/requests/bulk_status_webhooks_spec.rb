@@ -36,7 +36,7 @@ RSpec.describe "Bulk status changes fire content webhooks", type: :request do
   # actually go out. The debounce means only the last-scheduled one fires.
   def deploy_hook_posts
     posts = 0
-    http = instance_double(Net::HTTP, "use_ssl=": nil, "open_timeout=": nil, "read_timeout=": nil)
+    http = instance_double(Net::HTTP, "use_ssl=": nil, "open_timeout=": nil, "read_timeout=": nil, "ipaddr=": nil)
     allow(http).to receive(:request) { posts += 1; Net::HTTPOK.new("1.1", "200", "OK") }
     allow(Net::HTTP).to receive(:new).and_return(http)
 

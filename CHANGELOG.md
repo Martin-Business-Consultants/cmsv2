@@ -29,6 +29,16 @@ out.
 ### Fixed
 - **API search finds entries.** It answered 500 for any query, since the
   shared search index takes no loading scope.
+- **Webhooks, build hooks and purges can't be pointed into the CMS's own
+  network.** A URL that resolves to a loopback, private, link-local (cloud
+  metadata), carrier-grade NAT, multicast or IPv6 local address — written
+  plainly or as IPv4-in-IPv6 — is refused when a webhook is saved and
+  again when anything is sent, and each request goes to the address that
+  was checked, so a name can't resolve somewhere else in between. An
+  install whose receivers are on its own network sets
+  `CMS_ALLOW_PRIVATE_WEBHOOKS=true`.
+- **A webhook delivery no longer keeps what the receiver answered**, only
+  its status, timing and error. The bodies already stored are removed.
 
 ## 1.5.4
 

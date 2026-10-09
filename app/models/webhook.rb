@@ -108,15 +108,13 @@ class Webhook < ApplicationRecord
 
   private
 
-  # Parse rather than pattern-match: requires a real host, so "https://" or
-  # "http://#foo" are rejected, not just non-http schemes.
+  # A real http(s) host ("https://" or "http://#foo" aren't), and not one on
+  # the CMS's own network (OutboundUrl).
   def validate_url
     return if url.blank?
 
-    uri = URI.parse(url)
-    errors.add(:url, "must be an http(s) URL") unless uri.is_a?(URI::HTTP) && uri.host.present?
-  rescue URI::InvalidURIError
-    errors.add(:url, "must be an http(s) URL")
+    problem = OutboundUrl.problem_with(url)
+    errors.add(:url, problem) if problem
   end
 
   def validate_events

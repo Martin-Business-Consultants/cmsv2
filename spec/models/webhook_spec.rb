@@ -24,6 +24,15 @@ RSpec.describe Webhook do
       expect(make(url: "ftp://example.com")).not_to be_valid
     end
 
+    it "rejects a URL on the CMS's own network" do
+      OutboundUrl.resolver = ->(_host) { ["169.254.169.254"] }
+
+      webhook = make(url: "http://metadata.example.com/latest")
+      expect(webhook).not_to be_valid
+      expect(webhook.errors[:url].join).to match(/private or local/)
+      expect(make(url: "http://127.0.0.1:3000/hook")).not_to be_valid
+    end
+
     it "rejects unknown event names" do
       w = make(events: ["page.published", "bogus.event"])
       expect(w).not_to be_valid

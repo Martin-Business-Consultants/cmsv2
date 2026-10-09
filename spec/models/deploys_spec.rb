@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Deploys do
   def http_stub(response)
-    http = instance_double(Net::HTTP, "use_ssl=": nil, "open_timeout=": nil, "read_timeout=": nil)
+    http = instance_double(Net::HTTP, "use_ssl=": nil, "open_timeout=": nil, "read_timeout=": nil, "ipaddr=": nil)
     allow(Net::HTTP).to receive(:new).and_return(http)
     allow(http).to receive(:request) { |request| @request = request; response }
     http
@@ -189,6 +189,37 @@ RSpec.describe Deploys do
       expect(Deploys.current.label).to eq("Cloudflare (Pages or Workers Builds deploy hook)")
       expect(Deploys.current.fire(reason: "manual").status).to eq("success")
       expect(@request.path).to eq("/client/v4/workers/builds/deploy_hooks/abc")
+    end
+  end
+
+  describe "sending to the site's own URLs" do
+    it "won't fire a build hook that points inside the network" do
+      Setting.set("deploy", {"url" => "http://ci.internal.example.com/build"})
+      OutboundUrl.resolver = ->(_host) { ["192.168.1.20"] }
+      expect(Net::HTTP).not_to receive(:new)
+
+      attempt = Deploys.current.fire(reason: "manual")
+
+      expect(attempt.status).to eq("failure")
+      expect(attempt.error).to match(/private or local/)
+    end
+
+    it "won't send a purge to a webhook URL that points inside the network" do
+      OutboundUrl.resolver = ->(_host) { ["127.0.0.1"] }
+      expect(Net::HTTP).not_to receive(:new)
+
+      attempt = Deploys::Purge.fire(reason: "manual", changes: [], url: "http://site.example.com/_cms/webhook", secret: "s")
+
+      expect(attempt.status).to eq("failure")
+      expect(attempt.error).to match(/private or local/)
+    end
+
+    it "pins a build hook's request to the address it checked" do
+      Setting.set("deploy", {"url" => "https://hooks.example.com/x"})
+      http = http_stub(Net::HTTPOK.new("1.1", "200", "OK"))
+
+      expect(Deploys.current.fire(reason: "manual").status).to eq("success")
+      expect(http).to have_received(:ipaddr=).with("203.0.113.10")
     end
   end
 end

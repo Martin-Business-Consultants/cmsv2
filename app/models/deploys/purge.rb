@@ -22,11 +22,7 @@ module Deploys::Purge
 
   def fire(reason:, changes:, all: false, url: Frontend.purge_url, secret: Frontend.purge_secret)
     body = JSON.generate(body(reason: reason, changes: changes, all: all))
-    uri  = URI.parse(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = (uri.scheme == "https")
-    http.open_timeout = Deploys::Provider::OPEN_TIMEOUT
-    http.read_timeout = Deploys::Provider::READ_TIMEOUT
+    uri, http = OutboundUrl.connect(url, open_timeout: Deploys::Provider::OPEN_TIMEOUT, read_timeout: Deploys::Provider::READ_TIMEOUT)
     request = Net::HTTP::Post.new(uri.request_uri, {
       "Content-Type"    => "application/json",
       "User-Agent"      => "mbc-cms-deploy/1",
