@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.5.1
+
 ### Fixed
 - **1.5.0 wouldn't start on a site whose roles hold a plugin's capabilities
   that plugin isn't here for** (Commerce's `quotes:read` on a site moved
