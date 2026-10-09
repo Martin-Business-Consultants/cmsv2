@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.5.0
+
 ### Fixed
 - **A plugin that starts on, installed into a running site, is set up.** Forms
   or Media installed after the roles existed (`plugins:install`, Settings ›
