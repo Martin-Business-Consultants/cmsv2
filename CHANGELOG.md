@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.4.2
+
 ### Added
 - **`CMS_PREVIOUS_SECRET_KEY_BASE`** keeps values another install encrypted
   readable here: a site moved from the old shared deployment sets it to that
