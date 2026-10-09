@@ -8,6 +8,7 @@ module UpdatesHelper
       destination = Upgrade::Github.destination.presence
       "The Deploy workflow on GitHub (#{UpdateCheck.repo}#{", destination #{destination}" if destination})"
     when "local" then "bin/update on this server"
+    when "in_place" then "This install itself: it downloads the release and restarts on it"
     else "By hand: updating from here isn’t set up"
     end
   end

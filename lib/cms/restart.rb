@@ -10,6 +10,19 @@ module Cms
   module Restart
     extend self
 
+    # Starts the whole container again, for a release it updated to in place
+    # (Upgrade::InPlace): its main process stops and Docker's restart policy
+    # (Kamal's unless-stopped) starts it, so bin/docker-entrypoint picks the
+    # release, backs up and migrates. Elsewhere, a Puma restart as below.
+    def container_later(delay: 5)
+      return later(delay:) unless ENV["CMS_RUNTIME"] == "docker"
+
+      Thread.new do
+        sleep delay
+        Process.kill("TERM", 1)
+      end
+    end
+
     def later(delay: 5)
       log = Rails.root.join("log/restart.log").to_s
       Bundler.with_unbundled_env do

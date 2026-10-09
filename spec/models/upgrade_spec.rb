@@ -15,7 +15,7 @@ RSpec.describe Upgrade do
 
   describe ".via" do
     it "takes CMS_UPDATES when it names a way" do
-      %w[github local manual].each do |via|
+      %w[github local in_place manual].each do |via|
         with_env("CMS_UPDATES" => via) { expect(described_class.via).to eq(via) }
       end
     end
@@ -39,6 +39,8 @@ RSpec.describe Upgrade do
       allow(env).to receive(:exist?).and_return(false)
       with_env("CMS_UPDATES" => nil, "CMS_GITHUB_TOKEN" => "ghp_x") { expect(described_class.via).to eq("github") }
       with_env("CMS_UPDATES" => nil, "CMS_GITHUB_TOKEN" => nil) { expect(described_class.via).to eq("manual") }
+      with_env("CMS_UPDATES" => nil, "CMS_GITHUB_TOKEN" => nil, "CMS_RUNTIME" => "docker") { expect(described_class.via).to eq("in_place") }
+      with_env("CMS_UPDATES" => nil, "CMS_GITHUB_TOKEN" => "ghp_x", "CMS_RUNTIME" => "docker") { expect(described_class.via).to eq("github") }
     end
   end
 

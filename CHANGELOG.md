@@ -8,6 +8,19 @@ out.
 
 ## Unreleased
 
+### Added
+- **A Docker install updates itself from Settings › Updates**, as Runwell
+  and WordPress do, with nothing to set up: Update downloads the release's
+  bundle for this machine (the app, its gems, the default plugins and its
+  Ruby, attached to every release from now on) into the data volume, checks
+  it, and restarts the container on it (`Upgrade::InPlace`). Deploying a
+  newer image takes over again. A release that needs a new system base
+  redeploys through Hoster or GitHub when the install can, or says how, and
+  one that would leave a `CMS_PLUGINS` plugin behind refuses. Installs
+  deployed by Hoster without its API token, and Kamal installs without
+  GitHub's, now update this way instead of by hand. An install deploys 1.4.0
+  once to get it.
+
 ## 1.3.0
 
 ### Added

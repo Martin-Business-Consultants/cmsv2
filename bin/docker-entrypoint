@@ -1,5 +1,19 @@
 #!/bin/bash -e
 
+# Databases, uploads, plugins and releases stay where they are whichever
+# release runs: an absolute data directory, so a release in it finds them too.
+export CMS_DATA_DIR="$(realpath -m "${CMS_DATA_DIR:-/rails/storage}")"
+
+# An install that updated itself (Settings › Updates, Upgrade::InPlace) keeps
+# the release in its data volume and runs it, until an image at least as new
+# is deployed.
+current="$CMS_DATA_DIR/releases/current"
+if [ -f "$current/VERSION" ] && ruby -e 'exit Gem::Version.new(File.read(ARGV[0]).strip) > Gem::Version.new(File.read(ARGV[1]).strip)' "$current/VERSION" /rails/VERSION; then
+  cd "$(readlink -f "$current")"
+  export BUNDLE_PATH="$PWD/bundle"
+  echo "Running CMS $(cat VERSION) from $PWD (the image holds $(cat /rails/VERSION))"
+fi
+
 # If running the rails server then back up the data directory when this
 # release has migrations to run (cms:backup_if_pending; a plain restart takes
 # none), and create or migrate the database. A fresh data directory gets the

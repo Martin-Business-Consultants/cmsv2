@@ -6,9 +6,11 @@
 #   docker build --secret id=CMS_PLUGINS,env=CMS_PLUGINS -t cms .   # with the install's plugins
 #   docker run -d -p 80:80 -e SECRET_KEY_BASE=… -v cms_storage:/rails/storage --name cms cms
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
+# Make sure RUBY_VERSION matches the Ruby version in .ruby-version. The Debian
+# release is pinned with the base (CMS_BASE): the Ruby each release carries is
+# built on it, so an install updating in place keeps a system it runs on.
 ARG RUBY_VERSION=4.0.6
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+FROM docker.io/library/ruby:$RUBY_VERSION-slim-trixie AS base
 
 # Rails app lives here
 WORKDIR /rails
@@ -20,11 +22,16 @@ RUN apt-get update -qq && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment variables and enable jemalloc for reduced memory usage and latency.
+# CMS_BASE counts changes to this stage (Ruby aside, which travels with each
+# release): bump it when a release needs other system packages or a newer
+# Debian, so an install updating in place (Upgrade::InPlace) redeploys instead.
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development:test" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
+    CMS_RUNTIME="docker" \
+    CMS_BASE="1"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -69,6 +76,17 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 # requiring the install's secrets
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
+
+# The release bundle an install updates itself with (Upgrade::InPlace): the
+# app as built, the default plugins included, with its gems in bundle/ and the
+# Ruby they were built for in ruby/ (config/bundled_ruby.rb switches to it),
+# so a new Ruby updates in place too. The release workflow exports it for
+# each architecture and checks it boots on another Ruby (bin/check-bundle).
+FROM scratch AS bundle
+COPY --from=build /rails /
+COPY --from=build /usr/local/bundle /bundle
+COPY --from=build /usr/local/bin /ruby/bin
+COPY --from=build /usr/local/lib /ruby/lib
 
 # Final stage for app image
 FROM base

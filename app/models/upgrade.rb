@@ -9,16 +9,19 @@
 #   github  a Docker install deployed with Kamal: starts the releases repo's
 #           Deploy workflow (.github/workflows/deploy.yml) for this install's
 #           destination (Upgrade::Github)
-#   local   a plain install (bin/install): runs bin/update with the release's
-#           tag in the background, which restarts Puma when it's done
-#           (Upgrade::Local)
-#   manual  neither is set up: Settings › Updates shows the command instead
+#   local     a plain install (bin/install): runs bin/update with the release's
+#             tag in the background, which restarts Puma when it's done
+#             (Upgrade::Local)
+#   in_place  any other Docker install: downloads the release's bundle into
+#             its data volume and restarts on it, the way WordPress updates
+#             itself (Upgrade::InPlace)
+#   manual    none of these: Settings › Updates shows the command instead
 #
 # CMS_UPDATES picks one. Left unset, a production checkout with a .env is
-# local, one with CMS_HOSTER_TOKEN is hoster, and one with CMS_GITHUB_TOKEN
-# is github; anything
-# else, development included, is manual, so a button never checks out a tag
-# over someone's working copy. It succeeds when this install boots on the new
+# local, one with CMS_HOSTER_TOKEN is hoster, one with CMS_GITHUB_TOKEN is
+# github, and any other Docker install (CMS_RUNTIME=docker) is in_place;
+# anything else, development included, is manual, so a button never checks
+# out a tag over someone's working copy. It succeeds when this install boots on the new
 # version; a failed run, or no word within TIMEOUT, fails it. The old version
 # keeps running meanwhile.
 class Upgrade < ApplicationRecord
@@ -26,7 +29,7 @@ class Upgrade < ApplicationRecord
 
   class Refused < StandardError; end
 
-  VIAS = %w[hoster github local manual].freeze
+  VIAS = %w[hoster github local in_place manual].freeze
   STATUSES = %w[running succeeded failed].freeze
   TIMEOUT = 45.minutes
 
@@ -52,6 +55,8 @@ class Upgrade < ApplicationRecord
       "hoster"
     elsif UpdateCheck::Github.deploy_token?
       "github"
+    elsif Upgrade::InPlace.available?
+      "in_place"
     else
       "manual"
     end
@@ -60,7 +65,7 @@ class Upgrade < ApplicationRecord
   # Why the button can't update this install, or nil when it can.
   def self.unavailable_reason
     case via
-    when "local" then nil
+    when "local", "in_place" then nil
     when "hoster" then Upgrade::Hoster.unavailable_reason
     when "github" then Upgrade::Github.unavailable_reason
     else "Updating from here isn't set up on this install."
@@ -121,5 +126,5 @@ class Upgrade < ApplicationRecord
   # How the audit log names it.
   def title = "#{from_version} → #{to_version}"
 
-  def runner = {"hoster" => Upgrade::Hoster, "github" => Upgrade::Github, "local" => Upgrade::Local}.fetch(via).new(self)
+  def runner = {"hoster" => Upgrade::Hoster, "github" => Upgrade::Github, "local" => Upgrade::Local, "in_place" => Upgrade::InPlace}.fetch(via).new(self)
 end

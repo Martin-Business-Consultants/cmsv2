@@ -24,7 +24,7 @@ checkout with `bin/install`.
 | `CMS_PLUGINS` | The install's plugins, for a Docker build (see Plugins below). |
 | `CMS_RELEASES_REPO`, `CMS_RELEASES_TOKEN` | Where the daily update check looks (default `Martin-Business-Consultants/cmsv2`), and a token if that repo is private. |
 | `CMS_UPDATE_CHECK` | `false` stops the daily check for a newer release. |
-| `CMS_UPDATES` | How Settings › Updates updates: `local` (bin/update), `hoster` (a deploy proposed to Hoster), `github` (the Deploy workflow) or `manual` (shows the command). Worked out from the install when unset. |
+| `CMS_UPDATES` | How Settings › Updates updates: `local` (bin/update), `hoster` (a deploy proposed to Hoster), `github` (the Deploy workflow), `in_place` (a Docker install updating itself) or `manual` (shows the command). Worked out from the install when unset. |
 | `CMS_HOSTER_URL`, `CMS_HOSTER_TOKEN`, `CMS_HOSTER_ENVIRONMENT_ID` | For an install Hoster deploys: where Hoster is, an API token that may propose changes, and the install's environment there. |
 | `CMS_GITHUB_TOKEN`, `CMS_DEPLOY_DESTINATION`, `CMS_DEPLOY_WORKFLOW` | For a Docker install updating itself: a token that may start the Deploy workflow, the site's destination, and the workflow file (`deploy.yml`). |
 
@@ -59,12 +59,13 @@ environment's destination from its hosts, domains, variables and secrets.
 4. Secrets: `SECRET_KEY_BASE` and the three `AR_ENCRYPTION_*` keys for a new
    site, or only `SECRET_KEY_BASE` (the old install's) for one moved from the
    old shared install; `SMTP_PASSWORD`; `CMS_PLUGINS` if it has plugins.
-5. So Settings › Updates can update it: `CMS_HOSTER_URL`, `CMS_HOSTER_TOKEN`
-   (a Hoster API token with write access, as a secret) and
-   `CMS_HOSTER_ENVIRONMENT_ID`. Update then proposes deploying the release's
-   tag; Hoster's API only proposes, so the deploy runs once someone approves
-   it in Hoster, and the page links there. An environment can instead deploy
-   every new tag by itself.
+5. Nothing, for Settings › Updates: its Update button updates the install in
+   place (Updating, below). To have it propose a deploy to Hoster instead,
+   set `CMS_HOSTER_URL`, `CMS_HOSTER_TOKEN` (a Hoster API token with write
+   access, as a secret) and `CMS_HOSTER_ENVIRONMENT_ID`; Hoster's API only
+   proposes, so that deploy runs once someone approves it in Hoster, and the
+   page links there. An environment can instead deploy every new tag by
+   itself.
 
 A site already running on the server comes in with Hoster's import, which
 keeps its service, destination and volume rather than starting on an empty
@@ -95,8 +96,30 @@ the first visit to `/sign_up` does. Run it with
 
 A release is a `vX.Y.Z` tag. The install checks for a newer one daily, and
 Settings › Updates shows it with its notes and an **Update** button. The
-button works one of three ways, depending on how the install runs
+button works one of four ways, depending on how the install runs
 (`CMS_UPDATES` forces one):
+
+- **A Docker install** (Kamal or Hoster, with neither of the last two set
+  up) updates itself in place, the way WordPress does. Each release carries
+  a bundle for amd64 and arm64 (the Dockerfile's `bundle` stage: the app,
+  its gems, compiled assets, the default plugins and the Ruby they run on),
+  built by `.github/workflows/release.yml` in the minutes after it's
+  published. The button downloads the one for this machine into
+  `$CMS_DATA_DIR/releases/vX.Y.Z`, checks its checksum, points
+  `releases/current` at it and restarts the container, which is unavailable
+  for a few seconds. On boot `bin/docker-entrypoint` runs whichever is
+  newer, the image or `releases/current`, backing up and migrating as
+  usual; deploying a newer image takes over again. It relies on the
+  container's restart policy (Kamal's `unless-stopped`, which Hoster's
+  deploys have too). Only a release that needs other system packages or
+  Debian (`CMS_BASE` in the Dockerfile) needs a new image: the update then
+  deploys it through Hoster or GitHub if the install can, or says how.
+  Plugins installed from Settings › Plugins live in the data volume and
+  carry over; a plugin the image carries from `CMS_PLUGINS` that isn't a
+  default one isn't in the bundle, so the update refuses rather than drop
+  it (install it from Settings › Plugins instead). An install on an image
+  older than 1.4.0 deploys once to get this. `kamal app exec` opens a shell
+  in the image's copy (`/rails`), not the running release.
 
 - **A plain install** (a checkout with a `.env`) runs `bin/update <tag>` in
   the background: back up the data directory, fetch and check out the
@@ -113,8 +136,8 @@ button works one of three ways, depending on how the install runs
   `SSH_PRIVATE_KEY` and the secrets its destination names.
 
 The page follows the update and says when the install runs the new version,
-or why it failed; until then the old version keeps running. Without either,
-it shows the command. By hand:
+or why it failed; until then the old version keeps running. Without any of
+these, it shows the command. By hand:
 
     bin/update             # the code that's checked out (after your own git pull)
     bin/update v1.1.0      # fetch and check out that release first

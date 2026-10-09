@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require_relative "../config/bundled_ruby" # A release updated in place runs on the Ruby it carries.
 require "rubygems"
 require "bundler/setup"
 
