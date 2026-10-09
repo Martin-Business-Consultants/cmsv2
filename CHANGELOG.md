@@ -8,6 +8,28 @@ out.
 
 ## Unreleased
 
+### Security
+- **The API refuses what doesn't say who may call it.** Every core API
+  action now declares a capability or opens itself on purpose; one that
+  says neither answers 403 instead of serving any token. Search
+  (`POST /api/search`), references (`GET /api/references`), the sitemap, the
+  manifest and the redirect table's reads, imports and exports had no gate.
+  Plugins' API controllers keep the old default until they opt in.
+- **Search and references show a read-only token only live content.** They
+  listed drafts' titles, slugs, status and matched text to any token; now
+  pages and entries are only the live ones unless the token can write them,
+  and only the kinds it reads. `/api/v1/content` sends entries and globals
+  only to a token that reads them.
+- **A build's report can't change how publishing reaches the site.** The
+  site's read-only token could report `render: "server"` and any
+  `webhook_url`, which stopped rebuilds and sent the signed purges there. A
+  report now only keeps a site rebuilt on publish; anything else waits for
+  approval in Settings › Deploy (or `POST /api/frontend/delivery_approval`).
+
+### Fixed
+- **API search finds entries.** It answered 500 for any query, since the
+  shared search index takes no loading scope.
+
 ## 1.5.4
 
 ### Fixed

@@ -229,6 +229,13 @@ integration's `/_cms/webhook`). Publishing then:
   rebuilds, and purges everything.
 - **hybrid**: rebuilds (for the prerendered routes) and purges.
 
+The first report of `server` or `hybrid`, and any later change to how the
+site renders or to its `webhook_url`, waits in Settings › Deploy › The site
+for someone with `settings:write` to approve it (or `POST
+/api/frontend/delivery_approval`): the site builds with a read-only token, and
+that token shouldn't be able to stop rebuilds or send the signed purges
+somewhere else. A static site needs nothing approved.
+
 A purge is a `POST` to the webhook, signed like webhooks are:
 
     X-CMS-Event: cms.purge

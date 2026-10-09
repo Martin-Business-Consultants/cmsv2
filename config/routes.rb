@@ -186,6 +186,8 @@ Rails.application.routes.draw do
         # The secret cache purges are signed with (Frontend.purge_secret).
         resource :purge_secret_reveal, only: :create
         resource :purge_secret_rotation, only: :create
+        # Takes what the last build reported about rendering and purges.
+        resource :delivery_approval, only: :create
       end
     end
     # This install's version and the newest release; create updates to it
@@ -259,6 +261,8 @@ Rails.application.routes.draw do
     resource :frontend, only: :show
     namespace :frontend do
       resources :builds, only: :create
+      # Takes what the last build reported about rendering and purges.
+      resource :delivery_approval, only: :create
     end
 
     # The CLI's device-login handshake — unauthenticated by design, since it is

@@ -53,7 +53,11 @@ A build reports itself to `POST /api/frontend/builds` with how it renders
 `content_cursor` it built from (docs/install.md, "Static or on demand").
 Publishing then rebuilds a static site through the deploy provider (GitHub,
 a build hook, or Cloudflare), and sends an on-demand site a signed purge
-(`X-CMS-Signature: sha256=<HMAC>`) naming what changed.
+(`X-CMS-Signature: sha256=<HMAC>`) naming what changed. A report can only
+keep a site rebuilt on publish; one that switches it to purges, or moves where
+they go, waits for approval in Settings › Deploy (`POST
+/api/frontend/delivery_approval`, settings:write) — the site's read-only
+token can't make that change on its own.
 
 Cache tags, the same in `Cache-Tag` headers and purges: `page:<path>`,
 `entry:<collection>/<slug>`, `collection:<slug>`, `global:<slug>`, `pages`,

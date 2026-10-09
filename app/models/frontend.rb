@@ -19,7 +19,16 @@ module Frontend
 
   # The build's report, kept as the last build. Unknown values are dropped
   # rather than refused: a newer integration may send more than this knows.
+  #
+  # How the site renders and where it takes purges decide what publishing
+  # does (Deploys), so a report only proposes them: the site's token is
+  # read-only, and shouldn't be able to stop rebuilds or point the signed
+  # purges somewhere else. A report that keeps the site rebuilt on publish,
+  # as every static site's does, is taken as it is; one that would change
+  # how publishing reaches the site waits for someone who can change Settings
+  # › Deploy to approve it (`approve_delivery!`).
   def record_build(report)
+    adopt_legacy_delivery!
     build = report.slice("integration", "integration_version", "framework", "framework_version", "site_url")
       .transform_values { it.to_s.first(100) }.compact_blank
     build["pages"] = report["pages"].to_i if report["pages"].present?
@@ -31,12 +40,40 @@ module Frontend
     build["built_at"] = Time.current.iso8601
     Setting.set(SETTING, {"last_build" => build})
     Event.record("frontend.built", **build.symbolize_keys.except(:built_at, :webhook_url))
+    reported = build.slice("render", "webhook_url")
+    Setting.set(SETTING, {"delivery" => reported}) if rebuilt_only?(delivery) && rebuilt_only?(reported)
     build
   end
 
-  # How the site last said it renders: "static", "server", "hybrid", or nil
+  # How publishing reaches the site, as approved: {"render", "webhook_url"}.
+  # Empty until a build has said, which means rebuild it.
+  def delivery
+    settings = Setting.get(SETTING)
+    return settings["delivery"].slice("render", "webhook_url") if settings["delivery"].is_a?(Hash)
+
+    # Before deliveries were approved, the last build's word was taken.
+    (settings["last_build"].is_a?(Hash) ? settings["last_build"] : {}).slice("render", "webhook_url")
+  end
+
+  # What the last build reported, when it would change how publishing
+  # reaches the site and waits for approval; nil otherwise.
+  def pending_delivery
+    reported = (Setting.get(SETTING)["last_build"] || {}).slice("render", "webhook_url")
+    reported unless reported == delivery
+  end
+
+  # Takes what the last build reported as how publishing reaches the site.
+  # False when there was nothing waiting.
+  def approve_delivery!
+    reported = pending_delivery or return false
+    Setting.set(SETTING, {"delivery" => reported})
+    Event.record("frontend.delivery_approved", render: reported["render"], webhook_url: reported["webhook_url"])
+    true
+  end
+
+  # How the site renders, as approved: "static", "server", "hybrid", or nil
   # before an integration has told.
-  def render = last_build&.dig(:render)
+  def render = delivery["render"]
 
   # Changes reach visitors only after a build — everything a static site
   # serves, a hybrid site's prerendered routes, and any site that hasn't
@@ -44,10 +81,9 @@ module Frontend
   def prerendered? = render != "server"
 
   # Where a site that renders on demand takes cache purges (the integration's
-  # /_cms/webhook); nil for a static site, which has nothing to purge.
-  def purge_url
-    last_build&.dig(:webhook_url) if %w[server hybrid].include?(render)
-  end
+  # /_cms/webhook), as approved; nil for a static site, which has nothing to
+  # purge.
+  def purge_url = purge_url_of(delivery)
 
   def purges? = purge_url.present?
 
@@ -95,5 +131,19 @@ module Frontend
       {name: token.name, kind: "service", last_used_at: token.last_used_at}
     end
     (people + services).sort_by { -it[:last_used_at].to_i }.first(limit)
+  end
+
+  def purge_url_of(delivery)
+    delivery["webhook_url"] if %w[server hybrid].include?(delivery["render"])
+  end
+
+  # Publishing rebuilds the site and purges nothing: a static site, or one
+  # that hasn't said.
+  def rebuilt_only?(delivery) = delivery["render"] != "server" && purge_url_of(delivery).nil?
+
+  # An install upgraded from when the last build's word was taken keeps what
+  # it had, rather than a new report deciding it.
+  def adopt_legacy_delivery!
+    Setting.set(SETTING, {"delivery" => delivery}) unless Setting.get(SETTING).key?("delivery")
   end
 end

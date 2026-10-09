@@ -46,7 +46,7 @@
   <h2 class="<%= ui(:heading) %>">The site</h2>
   <% if build %>
     <p class="text-sm text-gray-700">
-      <% case build[:render] %>
+      <% case Frontend.render %>
       <% when "server" %>
         The site renders on demand, so publishing sends it a cache purge for what changed rather than rebuilding it.
       <% when "hybrid" %>
@@ -62,8 +62,20 @@
       <% if build[:integration] %> · <%= build[:integration] %> <%= build[:integration_version] %><% end %>
       <% if build[:content_cursor] %> · built from content <span class="font-mono"><%= build[:content_cursor].first(16) %></span><% end %>
     </p>
-    <% if build[:webhook_url] %>
-      <p class="text-sm text-gray-700">Purges go to <span class="font-mono"><%= build[:webhook_url] %></span>, signed with this secret — the site’s <code>CMS_WEBHOOK_SECRET</code>:</p>
+    <% if (pending = Frontend.pending_delivery) %>
+      <div class="space-y-2 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm">
+        <p>
+          The last build says the site renders <strong><%= pending["render"] || "without saying how" %></strong><% if pending["webhook_url"] %>
+          and takes purges at <span class="font-mono"><%= pending["webhook_url"] %></span><% end %>.
+          That changes how publishing reaches the site, so it waits for approval: a build’s token can’t change it on its own.
+        </p>
+        <% if writable %>
+          <div><%= button_to "Approve", settings_deploy_delivery_approval_path, class: ui(:button, :small), form: { data: { turbo_confirm: "Publishing will follow what the site reported. Approve?" } } %></div>
+        <% end %>
+      </div>
+    <% end %>
+    <% if Frontend.purge_url %>
+      <p class="text-sm text-gray-700">Purges go to <span class="font-mono"><%= Frontend.purge_url %></span>, signed with this secret — the site’s <code>CMS_WEBHOOK_SECRET</code>:</p>
       <% if writable %>
         <%= render "settings/secret", frame_id: "purge_secret", masked: "•" * 24, visible: true, reveal_path: settings_deploy_purge_secret_reveal_path %>
         <div><%= button_to "Rotate the secret", settings_deploy_purge_secret_rotation_path, class: ui(:button, :small), form: { data: { turbo_confirm: "The site needs the new secret before it accepts another purge. Rotate it?" } } %></div>

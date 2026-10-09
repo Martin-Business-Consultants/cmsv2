@@ -120,6 +120,7 @@ RSpec.describe Deploys do
     it "purges a site rendered on demand instead of rebuilding it, signed with its secret" do
       Setting.set("deploy", {"provider" => "build_hook", "url" => "https://build.example/hook"})
       Frontend.record_build("render" => "server", "webhook_url" => "https://acme.test/_cms/webhook")
+      Frontend.approve_delivery!
       http_stub(Net::HTTPOK.new("1.1", "200", "OK"))
 
       described_class.schedule_later(reason: "page.published", subject: page)
@@ -137,6 +138,7 @@ RSpec.describe Deploys do
     it "rebuilds a hybrid site's prerendered pages and purges the rest" do
       Setting.set("deploy", {"provider" => "cloudflare", "url" => "https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/x"})
       Frontend.record_build("render" => "hybrid", "webhook_url" => "https://acme.test/_cms/webhook")
+      Frontend.approve_delivery!
       paths = []
       http = http_stub(Net::HTTPOK.new("1.1", "200", "OK"))
       allow(http).to receive(:request) { |request| paths << request.path; Net::HTTPOK.new("1.1", "200", "OK") }
@@ -151,6 +153,7 @@ RSpec.describe Deploys do
     it "asks a server site to purge everything on Deploy now, and rebuilds it too" do
       Setting.set("deploy", {"provider" => "build_hook", "url" => "https://build.example/hook"})
       Frontend.record_build("render" => "server", "webhook_url" => "https://acme.test/_cms/webhook")
+      Frontend.approve_delivery!
       bodies = []
       http = http_stub(Net::HTTPOK.new("1.1", "200", "OK"))
       allow(http).to receive(:request) { |request| bodies << request.body; Net::HTTPOK.new("1.1", "200", "OK") }
@@ -165,6 +168,7 @@ RSpec.describe Deploys do
     it "is ready with only a purge URL, and tells a plugin's provider only what it takes" do
       expect(described_class.ready?).to be(false)
       Frontend.record_build("render" => "server", "webhook_url" => "https://acme.test/_cms/webhook")
+      Frontend.approve_delivery!
       expect(described_class.ready?).to be(true)
 
       legacy = Class.new(Deploys::Provider) do
