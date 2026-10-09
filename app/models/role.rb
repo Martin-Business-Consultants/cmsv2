@@ -8,6 +8,10 @@ class Role < ApplicationRecord
   include ListSearchable
 
   search_on :name, :description
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: name, body: description}
 
   include Eventable
 

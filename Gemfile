@@ -15,6 +15,7 @@ gem "jbuilder"
 gem "kamal", require: false, group: [:development, :deploy]
 gem "lexxy", "~> 0.9.33"
 gem "propshaft"
+gem "rails-active_search", "~> 0.1"
 gem "puma", ">= 5.0"
 gem "rails", "~> 8.1.3"
 gem "reactionview", "~> 0.6.0"

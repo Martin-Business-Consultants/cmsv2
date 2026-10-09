@@ -12,6 +12,10 @@ class Global < ApplicationRecord
   include ListSearchable
 
   search_on :name, :slug, :description
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: name, body: [slug, description].compact.join("\n")}
 
   include SoftDeletable
   include Eventable

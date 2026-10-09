@@ -144,6 +144,9 @@ Rails.application.routes.draw do
   get "branding.css", to: "branding_stylesheets#show", as: :branding_stylesheet, format: false
 
   get "settings", to: "settings/sections#index", as: :settings
+  # The admin bar's search, across everything (GlobalSearch).
+  resource :search, only: :show
+
   namespace :settings do
     resource :general, only: [:show, :update], controller: "generals"
     resource :profile, only: [:show, :update, :destroy]

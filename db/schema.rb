@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_212653) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_000922) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -389,6 +389,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_212653) do
     t.index ["status", "created_at"], name: "index_quote_requests_on_status_and_created_at"
   end
 
+  create_table "record_documents", force: :cascade do |t|
+    t.string "record_id", null: false
+    t.string "record_type", null: false
+    t.index ["record_type", "record_id"], name: "index_record_documents_on_record_type_and_record_id", unique: true
+  end
+
   create_table "redirects", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -561,6 +567,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_212653) do
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.
-  create_virtual_table "collection_entries_fts", "fts5", ["slug UNINDEXED", "collection_slug UNINDEXED", "title", "body", "tokenize = 'porter'"]
-  create_virtual_table "pages_fts", "fts5", ["slug UNINDEXED", "title", "body", "tokenize = 'porter'"]
+  create_virtual_table "record_documents_fts", "fts5", ["title", "body", "tokenize='trigram'"]
 end

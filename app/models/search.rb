@@ -1,59 +1,34 @@
 # frozen_string_literal: true
 
-# Full-text search over pages and collection entries (SQLite FTS5), 25 of
-# each, best match first, with a highlighted snippet.
+# Search across pages and collection entries for the API (POST /api/search,
+# cms search): the admin's search index (SearchIndexed), 25 of each, best
+# match first, each with a highlighted snippet of where it matched.
 class Search
+  LIMIT = 25
+  SNIPPET = {body: {markers: ["<mark>", "</mark>"], snippet: {words: 12}}}.freeze
+
   def initialize(query)
     @query = query
   end
 
-  def pages = search_pages(fts_query)
+  def pages
+    hits(Page) do |page|
+      {id: page.id, slug: page.slug, title: page.title, status: page.status, locale: page.locale, updated_at: page.updated_at}
+    end
+  end
 
-  def entries = search_entries(fts_query)
+  def entries
+    hits(CollectionEntry, scope: CollectionEntry.includes(:collection)) do |entry|
+      {id: entry.id, slug: entry.slug, collection_slug: entry.collection.slug, title: entry.title, status: entry.status,
+       locale: entry.locale, updated_at: entry.updated_at}
+    end
+  end
 
   private
 
-  # FTS5 has its own query syntax (AND/OR/NEAR/quoted phrases); user input is
-  # one phrase, so stray punctuation can't break the query or smuggle in
-  # operators.
-  def fts_query
-    %("#{@query.gsub(/["']/, " ").squeeze(" ").strip}")
-  end
-
-  def search_pages(fts_query)
-    sql = <<~SQL
-      SELECT p.id, p.slug, p.title, p.status, p.locale, p.updated_at,
-             snippet(pages_fts, 2, '<mark>', '</mark>', '…', 12) AS snippet
-      FROM pages_fts
-      JOIN pages p ON p.id = pages_fts.rowid
-      WHERE pages_fts MATCH ?
-      ORDER BY rank
-      LIMIT 25
-    SQL
-
-    rows = Page.connection.exec_query(
-      Page.send(:sanitize_sql_array, [sql, fts_query]),
-      "Page FTS"
-    )
-    rows.to_a
-  end
-
-  def search_entries(fts_query)
-    sql = <<~SQL
-      SELECT e.id, e.slug, c.slug AS collection_slug, e.title, e.status, e.locale, e.updated_at,
-             snippet(collection_entries_fts, 3, '<mark>', '</mark>', '…', 12) AS snippet
-      FROM collection_entries_fts
-      JOIN collection_entries e ON e.id = collection_entries_fts.rowid
-      JOIN collections c ON c.id = e.collection_id
-      WHERE collection_entries_fts MATCH ?
-      ORDER BY rank
-      LIMIT 25
-    SQL
-
-    rows = CollectionEntry.connection.exec_query(
-      CollectionEntry.send(:sanitize_sql_array, [sql, fts_query]),
-      "Entry FTS"
-    )
-    rows.to_a
+  def hits(model, scope: nil)
+    model.search(@query, **{scope:}.compact).highlight(**SNIPPET).limit(LIMIT).results.map do |record|
+      yield(record).merge(snippet: record.hit.highlight(:body))
+    end
   end
 end

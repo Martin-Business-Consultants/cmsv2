@@ -1,15 +1,16 @@
 # frozen_string_literal: true
 
-# Entries are indexed in the `collection_entries_fts` FTS5 table (slug, the
-# collection's slug, title, and the text of their blocks, body and fields),
-# kept in step on every save.
+# Entries are in the admin's search index (SearchIndexed) by title, with
+# their slug, their collection's and the text of their blocks, body and
+# fields as the body.
 module CollectionEntry::Searchable
   extend ActiveSupport::Concern
 
   included do
-    after_save :sync_fts
-    after_destroy :remove_fts
+    include SearchIndexed
   end
+
+  def search_document = {title: title, body: [slug, collection&.slug, search_text].compact.join("\n\n")}
 
   def search_text
     parts = []
@@ -26,21 +27,5 @@ module CollectionEntry::Searchable
     parts << body_markdown.to_s
     parts << BlockType.searchable_text_in(collection&.fields || [], frontmatter || {})
     parts.reject(&:blank?).join("\n\n")
-  end
-
-  private
-
-  def sync_fts
-    connection = self.class.connection
-    connection.execute(self.class.send(:sanitize_sql_array, ["DELETE FROM collection_entries_fts WHERE rowid = ?", id]))
-    connection.execute(self.class.send(:sanitize_sql_array, [
-      "INSERT INTO collection_entries_fts (rowid, slug, collection_slug, title, body) VALUES (?, ?, ?, ?, ?)",
-      id, slug, collection.slug, title, search_text
-    ]))
-  end
-
-  def remove_fts
-    connection = self.class.connection
-    connection.execute(self.class.send(:sanitize_sql_array, ["DELETE FROM collection_entries_fts WHERE rowid = ?", id]))
   end
 end

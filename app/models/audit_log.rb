@@ -22,6 +22,10 @@ class AuditLog < ApplicationRecord
   include ListSearchable
 
   search_on :action, :actor_label, :target_label
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: action, body: [actor_label, target_label].compact.join("\n")}
 
   belongs_to :actor,  polymorphic: true, optional: true
   belongs_to :target, polymorphic: true, optional: true

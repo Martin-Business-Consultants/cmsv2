@@ -8,6 +8,33 @@ out.
 
 ## Unreleased
 
+### Added
+- **Search everything from the admin bar.** The search icon at its top
+  right finds pages, entries, collections, globals, block types, redirects,
+  users and roles that hold a term, whatever the person's role can read,
+  with where each matched, a page at a time (`/search`, `GlobalSearch`).
+- **Numbered pagination on every index table**: 25 rows a page, and under
+  the table which rows these are and « Previous, the page numbers and
+  Next », keeping the list's filters and search. Lists that loaded more as
+  you scrolled, and those that showed everything (pages, trash, the
+  sitemap…), all page this way. Plugins' tables get it as they are.
+
+### Changed
+- **Search runs on ActiveSearch** (`rails-active_search`): one index of
+  every page, entry, collection, global, block type, redirect, user, role
+  and audit entry, in this install's database, kept in step as they're
+  saved. A list's search box searches it, finding any part of a word (two
+  characters or fewer still match by LIKE), and so do `POST /api/search`
+  and `cms search`. It replaces `pages_fts` and `collection_entries_fts`;
+  the migration indexes what's already there, and `bin/rails
+  search:reindex` replaces `fts:rebuild`.
+- **The admin's layout**: a page's actions (its New button) sit across from
+  its title at the right, and there's no line under the title. The admin
+  menu stays put while the page scrolls, a fly-out stays open as the
+  pointer travels to it, and the site's logo heads the menu. Screen options
+  is in the admin bar, beside the theme toggle, and choosing Light keeps
+  checkboxes and the browser's other controls light.
+
 ## 1.2.1
 
 ### Changed

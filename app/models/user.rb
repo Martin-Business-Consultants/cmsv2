@@ -4,6 +4,10 @@ class User < ApplicationRecord
   include ListSearchable
 
   search_on :name, :email
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: name.presence || email, body: email}
 
   include Eventable
   include TwoFactorAuthentication

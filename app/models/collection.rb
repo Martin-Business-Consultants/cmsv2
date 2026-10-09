@@ -8,6 +8,10 @@ class Collection < ApplicationRecord
   include ListSearchable
 
   search_on :name, :slug
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: name, body: slug}
 
   include Eventable
   # One per line: constants and callbacks register in include order.

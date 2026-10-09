@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
-# Pages are indexed in the `pages_fts` FTS5 table (slug, title, and the text
-# of their blocks and fields), kept in step on every save.
+# Pages are in the admin's search index (SearchIndexed) by title, with their
+# path and the text of their blocks and fields as the body.
 module Page::Searchable
   extend ActiveSupport::Concern
 
   included do
-    after_save :sync_fts
-    after_destroy :remove_fts
+    include SearchIndexed
   end
+
+  def search_document = {title: title, body: [path, search_text].compact.join("\n\n")}
 
   def search_text
     parts = []
@@ -24,21 +25,5 @@ module Page::Searchable
     end
     parts << BlockType.searchable_text_in(fields, frontmatter || {})
     parts.reject(&:blank?).join("\n\n")
-  end
-
-  private
-
-  def sync_fts
-    connection = self.class.connection
-    connection.execute(self.class.send(:sanitize_sql_array, ["DELETE FROM pages_fts WHERE rowid = ?", id]))
-    connection.execute(self.class.send(:sanitize_sql_array, [
-      "INSERT INTO pages_fts (rowid, slug, title, body) VALUES (?, ?, ?, ?)",
-      id, slug, title, search_text
-    ]))
-  end
-
-  def remove_fts
-    connection = self.class.connection
-    connection.execute(self.class.send(:sanitize_sql_array, ["DELETE FROM pages_fts WHERE rowid = ?", id]))
   end
 end

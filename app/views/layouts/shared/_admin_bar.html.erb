@@ -1,6 +1,7 @@
 <%# locals: () %>
 <%# The admin bar: the site, "+ New", the update notice, plugins' items, the
-    "/" filter, the theme and the signed-in person. Its menus open on hover
+    "/" filter, search across everything, screen options, the theme and the
+    signed-in person. Its menus open on hover
     and on keyboard focus (admin.css), with no JavaScript. %>
 <% site_url = public_site_url %>
 <% new_items = admin_new_items %>
@@ -57,6 +58,10 @@
   <div class="ml-auto flex items-center gap-1">
     <% unless content_for?(:list_search) %>
       <%= render "layouts/shared/nav_filter" %>
+    <% end %>
+    <%= link_to search_path, class: ui(:button, :plain, :icon), title: "Search everything" do %>
+      <%= icon_tag "search", class: "size-4" %>
+      <span class="sr-only">Search everything</span>
     <% end %>
     <%= render "layouts/shared/screen_options" %>
     <%= render "layouts/shared/theme_toggle" %>

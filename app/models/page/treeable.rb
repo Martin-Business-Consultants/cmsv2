@@ -103,8 +103,9 @@ module Page::Treeable
 
       Page.where(id: child.id).update_all(path: new_path, depth: new_depth, updated_at: Time.current)
       # Mirror the update in memory so later iterations compute their own
-      # children's paths from it.
+      # children's paths from it, and search finds it by its new one.
       child.assign_attributes(path: new_path, depth: new_depth)
+      child.reindex
     end
   end
 end

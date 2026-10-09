@@ -11,6 +11,7 @@ RSpec.describe "Index tables' numbered pagination", type: :request do
   before do
     sign_in_as admin
     Redirect.insert_all!((1..60).map { |n| {source_path: format("/old-%02d", n), destination_url: "/new", status_code: 301, active: true, created_at: Time.current, updated_at: n.minutes.ago} })
+    Redirect.find_each(&:reindex) # insert_all runs no callbacks, as a bulk import doesn't
   end
 
   it "shows a page of rows with Previous, the page numbers and Next" do

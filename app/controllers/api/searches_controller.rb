@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-# FTS5-backed search across pages and collection entries (Search).
+# Search across pages and collection entries (Search, on the admin's search
+# index).
 class Api::SearchesController < Api::BaseController
   def create
     @query = params.require(:q).to_s.strip

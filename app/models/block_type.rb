@@ -32,6 +32,10 @@ class BlockType < ApplicationRecord
   include ListSearchable
 
   search_on :label, :slug, :description
+  include SearchIndexed
+
+  # Its title and text in the admin's search (SearchIndexed).
+  def search_document = {title: label, body: [slug, category, description].compact.join("\n")}
 
   include Eventable
   # One per line: callbacks and associations register in include order.
