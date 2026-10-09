@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.3.0
+
 ### Added
 - **Search everything from the admin bar.** The search icon at its top
   right finds pages, entries, collections, globals, block types, redirects,
