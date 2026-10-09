@@ -117,16 +117,16 @@ RSpec.describe Upgrade::InPlace do
     expect(releases.join("current")).not_to exist
   end
 
-  it "redeploys through Hoster when the release needs a new base, or says how" do
+  it "redeploys through a strategy that can when the release needs a new base, or says how" do
     release(base: "2")
     described_class.new(upgrade).install
     expect(upgrade.reload.message).to include("needs a new image, for base 2 (this image has 1)", "Redeploy it")
 
     upgrade.update!(status: "running", message: nil)
-    hoster = instance_double(Upgrade::Hoster, start: nil)
-    allow(Upgrade::Hoster).to receive_messages(configured?: true, new: hoster)
+    deployer = register_update_strategy("deployer")
     described_class.new(upgrade).install
-    expect(upgrade.reload).to have_attributes(via: "hoster", status: "running")
-    expect(hoster).to have_received(:start)
+    expect(upgrade.reload).to have_attributes(via: "deployer", status: "running")
+    expect(upgrade.message).to include("deploying it through Deployer")
+    expect(deployer.started).to be(true)
   end
 end

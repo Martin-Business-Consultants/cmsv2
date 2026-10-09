@@ -4,8 +4,6 @@
 # Settings › Updates. How it happens depends on how the install runs
 # (`Upgrade.via`):
 #
-#   hoster  an install Hoster deploys: proposes the release's deploy to
-#           Hoster, which a person approves there (Upgrade::Hoster)
 #   github  a Docker install deployed with Kamal: starts the releases repo's
 #           Deploy workflow (.github/workflows/deploy.yml) for this install's
 #           destination (Upgrade::Github)
@@ -17,10 +15,12 @@
 #             itself (Upgrade::InPlace)
 #   manual    none of these: Settings › Updates shows the command instead
 #
-# CMS_UPDATES picks one. Left unset, a production checkout with a .env is
-# local, one with CMS_HOSTER_TOKEN is hoster, one with CMS_GITHUB_TOKEN is
-# github, and any other Docker install (CMS_RUNTIME=docker) is in_place;
-# anything else, development included, is manual, so a button never checks
+# A plugin adds others (Cms::Plugins.update_strategy, docs/plugins.md) — a
+# deploy tool the install runs under, say. CMS_UPDATES picks one. Left unset,
+# a production checkout with a .env is local, then the first plugin strategy
+# that says it's configured, then github with CMS_GITHUB_TOKEN, and any other
+# Docker install (CMS_RUNTIME=docker) is in_place; anything else, development
+# included, is manual, so a button never checks
 # out a tag over someone's working copy. It succeeds when this install boots on the new
 # version; a failed run, or no word within TIMEOUT, fails it. The old version
 # keeps running meanwhile.
@@ -28,8 +28,12 @@ class Upgrade < ApplicationRecord
   include Eventable
 
   class Refused < StandardError; end
+  # What a runner raises when the place it updates through answers badly; the
+  # update fails with its message (a plugin's runner subclasses it).
+  class Error < StandardError; end
 
-  VIAS = %w[hoster github local in_place manual].freeze
+  # The runners that ship with the core; plugins add theirs (`runners`).
+  CORE_RUNNERS = {"github" => "Upgrade::Github", "local" => "Upgrade::Local", "in_place" => "Upgrade::InPlace"}.freeze
   STATUSES = %w[running succeeded failed].freeze
   TIMEOUT = 45.minutes
 
@@ -37,22 +41,36 @@ class Upgrade < ApplicationRecord
   belongs_to :requested_by, class_name: "User", optional: true
 
   validates :requested_by, presence: true, on: :create
-  validates :via, inclusion: {in: VIAS - %w[manual]}
+  # Checked as an update starts: afterwards it's the record of how it ran, kept
+  # even when the plugin whose strategy it was is removed.
+  validates :via, inclusion: {in: ->(_) { runners.keys }}, on: :create
   validates :status, inclusion: {in: STATUSES}
 
   scope :running, -> { where(status: "running") }
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
 
+  # Every way this install could be updated: via => runner class.
+  def self.runners = CORE_RUNNERS.transform_values(&:constantize).merge(Cms::Plugins.enabled_update_strategies)
+
+  def self.vias = runners.keys + ["manual"]
+
+  # The plugins' runners that can deploy a new image of the install
+  # (`redeploys?`), then GitHub's: what an in-place update falls back on.
+  def self.redeployer
+    plugins = Cms::Plugins.enabled_update_strategies.select { |_, runner| runner.try(:redeploys?) && runner.configured? }
+    plugins.keys.first || ("github" if Upgrade::Github.configured?)
+  end
+
   def self.via
     configured = ENV["CMS_UPDATES"].presence
-    if VIAS.include?(configured)
+    if vias.include?(configured)
       configured
     elsif !Rails.env.production?
       "manual"
     elsif Rails.root.join(".git").exist? && Rails.root.join(".env").exist?
       "local"
-    elsif Upgrade::Hoster.configured?
-      "hoster"
+    elsif (plugin = Cms::Plugins.enabled_update_strategies.find { |_, runner| runner.configured? })
+      plugin.first
     elsif UpdateCheck::Github.deploy_token?
       "github"
     elsif Upgrade::InPlace.available?
@@ -64,12 +82,10 @@ class Upgrade < ApplicationRecord
 
   # Why the button can't update this install, or nil when it can.
   def self.unavailable_reason
-    case via
-    when "local", "in_place" then nil
-    when "hoster" then Upgrade::Hoster.unavailable_reason
-    when "github" then Upgrade::Github.unavailable_reason
-    else "Updating from here isn't set up on this install."
-    end
+    runner = runners[via]
+    return "Updating from here isn't set up on this install." unless runner
+
+    runner.try(:unavailable_reason)
   end
 
   def self.available? = unavailable_reason.nil?
@@ -97,7 +113,7 @@ class Upgrade < ApplicationRecord
 
   def run
     runner.start
-  rescue UpdateCheck::Github::Error, SystemCallError => error
+  rescue Error, UpdateCheck::Github::Error, SystemCallError => error
     fail_with error.message
   end
 
@@ -109,7 +125,9 @@ class Upgrade < ApplicationRecord
     else
       runner.check
     end
-  rescue UpdateCheck::Github::Error => error
+  rescue Refused => error
+    fail_with error.message
+  rescue Error, UpdateCheck::Github::Error => error
     Rails.error.report(error, context: {upgrade: id})
   end
 
@@ -126,5 +144,12 @@ class Upgrade < ApplicationRecord
   # How the audit log names it.
   def title = "#{from_version} → #{to_version}"
 
-  def runner = {"hoster" => Upgrade::Hoster, "github" => Upgrade::Github, "local" => Upgrade::Local, "in_place" => Upgrade::InPlace}.fetch(via).new(self)
+  # The runner for how this update went. One started by a plugin that has
+  # since been removed has none, and settles as failed.
+  def runner
+    runner = self.class.runners[via]
+    raise Refused, "The #{via} update strategy isn't installed any more." unless runner
+
+    runner.new(self)
+  end
 end

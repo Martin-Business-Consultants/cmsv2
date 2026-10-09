@@ -14,8 +14,8 @@ module Cms
     BOOLEANS = %w[ASSUME_SSL CMS_FORCE_SSL CMS_UPDATE_CHECK SMTP_INSECURE_TLS SOLID_QUEUE_IN_PUMA].freeze
     INTEGERS = %w[SMTP_PORT RAILS_MAX_THREADS WEB_CONCURRENCY JOB_CONCURRENCY PORT CMS_BACKUP_KEEP].freeze
     ENCRYPTION = %w[AR_ENCRYPTION_PRIMARY_KEY AR_ENCRYPTION_DETERMINISTIC_KEY AR_ENCRYPTION_KEY_DERIVATION_SALT].freeze
-    HOSTER = %w[CMS_HOSTER_URL CMS_HOSTER_TOKEN CMS_HOSTER_ENVIRONMENT_ID].freeze
-    UPDATES = %w[local hoster github in_place manual].freeze
+    # The core's update strategies; installed plugins add theirs (Upgrade).
+    UPDATES = %w[local github in_place manual].freeze
 
     def initialize(env, secret_key_base: nil)
       @env = env
@@ -82,24 +82,17 @@ module Cms
 
         @errors << "#{name} is #{v.inspect}: it's a whole number." unless v.match?(/\A\d+\z/)
       end
-      if (updates = value("CMS_UPDATES")) && !UPDATES.include?(updates)
-        @errors << "CMS_UPDATES is #{updates.inspect}: it's one of #{UPDATES.join(", ")}."
+      updates_allowed = UPDATES + Cms::Plugins.update_strategy_names
+      if (updates = value("CMS_UPDATES")) && !updates_allowed.include?(updates)
+        @errors << "CMS_UPDATES is #{updates.inspect}: it's one of #{updates_allowed.join(", ")}."
       end
       if (from = value("MAIL_FROM_ADDRESS")) && !from.match?(/\A[^@\s]+@[^@\s]+\z/)
         @errors << "MAIL_FROM_ADDRESS is #{from.inspect}: it's an email address."
-      end
-      if (url = value("CMS_HOSTER_URL")) && !url.match?(%r{\Ahttps?://\S+\z})
-        @errors << "CMS_HOSTER_URL is #{url.inspect}: it's an http(s) URL."
       end
     end
 
     def groups
       @warnings << "SMTP_PASSWORD isn't set, so the install can't send mail (password resets, invitations, form notifications)." unless value("SMTP_PASSWORD")
-
-      hoster = HOSTER.select { value(it) }
-      if hoster.any? && hoster.size < HOSTER.size
-        @errors << "#{(HOSTER - hoster).join(", ")} #{(HOSTER - hoster).one? ? "is" : "are"} missing: Hoster updates need all of #{HOSTER.join(", ")}."
-      end
     end
   end
 end

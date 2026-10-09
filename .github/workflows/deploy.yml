@@ -1,7 +1,7 @@
 # Deploys a release to one Kamal site. Started by hand from the Actions tab, or
 # by an owner pressing Update in the site's Settings › Updates (Upgrade::Github),
 # which fills in `upgrade` so the site can find this run again. Sites deployed
-# by Hoster update there instead.
+# by another tool update there instead.
 #
 # Each site is a GitHub environment named for its destination (the <site> in
 # config/deploy.<site>.yml), holding what the repository doesn't carry:

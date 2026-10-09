@@ -30,7 +30,8 @@
 # it isn't, whichever plugin loads first. `after: :start` puts it first.
 #
 # Registries that only a later plugin will use keep to a register/read API:
-# block type packs, schema field types and deploy providers.
+# block type packs, schema field types, deploy providers and update
+# strategies.
 #
 # Content events. Every webhook event (Webhook.events: the core's page.published,
 # page.updated, page.unpublished, page.deleted, the same for entry and
@@ -93,6 +94,7 @@ module Cms
     mattr_reader :block_type_packs, default: {}
     mattr_reader :field_types, default: Hash.new { |hash, key| hash[key] = {} }
     mattr_reader :deploy_providers, default: Hash.new { |hash, key| hash[key] = {} }
+    mattr_reader :update_strategies, default: Hash.new { |hash, key| hash[key] = {} }
     mattr_reader :permission_placements, default: Hash.new { |hash, key| hash[key] = {} }
     mattr_reader :permission_defaults, default: Hash.new { |hash, key| hash[key] = {} }
     mattr_reader :counters, default: Hash.new { |hash, key| hash[key] = [] }
@@ -329,6 +331,13 @@ module Cms
         deploy_providers[key.to_sym][provider_key.to_s] = provider
       end
 
+      # Another way Settings › Updates can update the install (Upgrade.via),
+      # as a lambda returning the runner class (docs/plugins.md, "Update
+      # strategies"), so code reloading hands back the current class.
+      def update_strategy(key, via, runner)
+        update_strategies[key.to_sym][via.to_s] = runner
+      end
+
       # --- state ------------------------------------------------------------
 
       # On in Settings, compatible with this core, and every plugin it depends
@@ -533,6 +542,9 @@ module Cms
       def enabled_permission_groups = permission_groups.select { |key, _| enabled?(key) }.values.reduce({}, :merge)
       def enabled_field_types = merged(field_types)
       def enabled_deploy_providers = merged(deploy_providers)
+      def enabled_update_strategies = merged(update_strategies).transform_values(&:call)
+      # Every installed plugin's, on or off: what CMS_UPDATES may name at boot.
+      def update_strategy_names = update_strategies.values.flat_map(&:keys).uniq
       def enabled_block_type_packs = block_type_packs.select { |key, _| enabled?(key) }
       def enabled_counters = listed(counters)
       def enabled_manifest_sections = listed(manifest_sections)
@@ -651,7 +663,8 @@ module Cms
           Array(block_type_packs[key]&.then { "Block types: #{it.block_types.size}" }) +
           trash_kinds[key].map { "Trash: #{it.label}" } +
           field_types[key].keys.map { "Field type: #{it}" } +
-          deploy_providers[key].keys.map { "Deploy provider: #{it}" }
+          deploy_providers[key].keys.map { "Deploy provider: #{it}" } +
+          update_strategies[key].keys.map { "Update strategy: #{it}" }
       end
 
       private

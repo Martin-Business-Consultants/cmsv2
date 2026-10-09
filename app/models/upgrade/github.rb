@@ -14,6 +14,12 @@ class Upgrade::Github
   def self.workflow = ENV["CMS_DEPLOY_WORKFLOW"].presence || "deploy.yml"
   def self.destination = ENV["CMS_DEPLOY_DESTINATION"].to_s.strip
 
+  def self.label = "GitHub"
+  def self.description = "The Deploy workflow on GitHub (#{UpdateCheck.repo}#{", destination #{destination}" if destination.present?})"
+  def self.configured? = UpdateCheck::Github.deploy_token? && destination.present?
+  # It deploys a new image, so an in-place update can fall back on it.
+  def self.redeploys? = true
+
   def self.unavailable_reason
     if !UpdateCheck::Github.deploy_token?
       "Set CMS_GITHUB_TOKEN (Actions read and write on #{UpdateCheck.repo}) to start the Deploy workflow from here."
@@ -48,6 +54,8 @@ class Upgrade::Github
   def timing_out_since = @upgrade.created_at
 
   def where_to_look = "The deploy's log on GitHub says what happened."
+
+  def follow_text = "Follow the deploy on GitHub"
 
   private
 

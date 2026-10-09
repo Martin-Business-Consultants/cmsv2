@@ -7,6 +7,9 @@
 # (CMS_DATA_DIR). The checkout must belong to that user and be able to fetch
 # from the repository.
 class Upgrade::Local
+  def self.label = "bin/update"
+  def self.description = "bin/update on this server"
+
   def initialize(upgrade)
     @upgrade = upgrade
   end

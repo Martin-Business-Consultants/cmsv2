@@ -34,16 +34,18 @@ RSpec.describe Cms::EnvCheck do
   it "refuses values the app would misread" do
     errors, = check(good.merge(
       "APP_PROTOCOL" => "htps", "CMS_FORCE_SSL" => "yes", "SMTP_PORT" => "25x", "CMS_UPDATES" => "auto",
-      "MAIL_FROM_ADDRESS" => "nobody", "CMS_HOSTER_URL" => "hoster"
+      "MAIL_FROM_ADDRESS" => "nobody"
     ))
-    %w[APP_PROTOCOL CMS_FORCE_SSL SMTP_PORT CMS_UPDATES MAIL_FROM_ADDRESS CMS_HOSTER_URL].each do |name|
+    %w[APP_PROTOCOL CMS_FORCE_SSL SMTP_PORT CMS_UPDATES MAIL_FROM_ADDRESS].each do |name|
       expect(errors).to include(start_with("#{name} is"))
     end
   end
 
-  it "needs all of Hoster's settings or none" do
-    errors, = check(good.merge("CMS_HOSTER_URL" => "https://hoster.example.com"))
-    expect(errors.join).to include("CMS_HOSTER_TOKEN, CMS_HOSTER_ENVIRONMENT_ID are missing")
+  it "takes an installed plugin's update strategy for CMS_UPDATES" do
+    expect(check(good.merge("CMS_UPDATES" => "deployer")).first.join).to include("CMS_UPDATES is")
+
+    register_update_strategy("deployer")
+    expect(check(good.merge("CMS_UPDATES" => "deployer")).first.join).not_to include("CMS_UPDATES")
   end
 
   it "warns that mail can't go out without SMTP_PASSWORD" do

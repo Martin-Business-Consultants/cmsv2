@@ -6,7 +6,7 @@ module PluginRegistryHelpers
   REGISTRIES = %i[manifests slots menu_items submenu_items new_items settings_pages permission_groups stylesheets nightly_tasks
     minutely_tasks bootstrap_tasks
     api_endpoints block_type_packs
-    field_types deploy_providers permission_placements permission_defaults counters manifest_sections
+    field_types deploy_providers update_strategies permission_placements permission_defaults counters manifest_sections
     trash_kinds providers webhook_event_groups webhook_event_filters].freeze
 
   def forget_plugin(key)

@@ -6,9 +6,8 @@
 #   kamal setup -d <site>     # once
 #   kamal deploy -d <site>    # every release
 #
-# Hoster reads this file as it is and writes the destination itself, from the
-# environment's hosts, domains, variables and secrets. docs/install.md has
-# both ways.
+# A tool that runs Kamal for you can read this file as it is and write the
+# destination itself. docs/install.md has both ways.
 service: cms
 image: cms
 

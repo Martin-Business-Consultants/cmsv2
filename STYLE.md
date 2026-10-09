@@ -58,7 +58,7 @@ rather than a service.
 - A collaborator that isn't a record is a plain Ruby object in `app/models`,
   namespaced under what it serves (`Page::BlockExpansion`, `Redirect::Import`).
 - There is no `app/services`, in the core or in a plugin. An orchestrator
-  with no record of its own (`Upgrade::Hoster`, `Deploys`) is a plain object
+  with no record of its own (`Upgrade::Github`, `Deploys`) is a plain object
   in `app/models` like any other; an HTTP client is one too, as in Fizzy's
   `Webhook::Delivery`.
 - A behaviour two records share, where neither owns it, is a concern in

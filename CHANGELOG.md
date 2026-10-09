@@ -49,7 +49,7 @@ out.
 - **A production install checks its configuration as it boots.** A missing
   `SECRET_KEY_BASE`, or a value the app would misread (`APP_PROTOCOL`,
   `APP_HOST` with a scheme, a true/false or number that isn't one,
-  `CMS_UPDATES`, `MAIL_FROM_ADDRESS`, half of Hoster's settings) stops the
+  `CMS_UPDATES`, `MAIL_FROM_ADDRESS`) stops the
   boot naming each problem. A missing `APP_HOST` or `SMTP_PASSWORD`, a short
   `SECRET_KEY_BASE` or some but not all `AR_ENCRYPTION_*` keys are logged.
 - **Builds get the code that was tested.** The default plugins are pinned to
@@ -64,6 +64,11 @@ out.
   2,000 images; it used to read every image into memory first.
 
 ### Added
+- **A plugin can add a way to update the install** from Settings › Updates
+  (`Cms::Plugins.update_strategy`, docs/plugins.md › Update strategies): a
+  deploy tool's, say. `CMS_UPDATES` names it like the core's own, and an
+  in-place update that needs a new image goes through one that can deploy
+  it. The core keeps `local`, `github` and `in_place`.
 - **Saving over someone else's change is refused, in the admin and the
   API.** Pages, entries and globals have a `lock_version`. The admin's forms
   send the one they opened and say so instead of overwriting; the API
@@ -84,6 +89,16 @@ out.
   global, collection, tag, translation or setting changes, with assets
   resolved fresh. Each token gets 1,200 requests a minute across `/api/v1`
   (`CMS_DELIVERY_RATE_LIMIT`, `0` for none), then `429` with `Retry-After`.
+
+### Changed
+- **New API tokens start `lp_`, and service tokens `lps_`.** Tokens are
+  found by their digest, so `mbc_` and `mbcs_` tokens keep working. Outgoing
+  requests say `librepublish-deploy/1` and `librepublish-webhooks/1`, and new
+  two-factor enrolments name LibrePublish.
+- **Webhooks are documented for any receiver** (docs/webhooks.md), with the
+  contract a receiver can rely on pinned in
+  `spec/fixtures/contracts/webhook_contract.json`. The development demo is a
+  fictional lender.
 
 ### Fixed
 - **API search finds entries.** It answered 500 for any query, since the
@@ -264,10 +279,10 @@ out.
   Ruby, attached to every release from now on) into the data volume, checks
   it, and restarts the container on it (`Upgrade::InPlace`). Deploying a
   newer image takes over again. A release that needs a new system base
-  redeploys through Hoster or GitHub when the install can, or says how, and
-  one that would leave a `CMS_PLUGINS` plugin behind refuses. Installs
-  deployed by Hoster without its API token, and Kamal installs without
-  GitHub's, now update this way instead of by hand. An install deploys 1.4.0
+  redeploys through another update strategy when the install has one, or says
+  how, and one that would leave a `CMS_PLUGINS` plugin behind refuses. Docker
+  installs with no other strategy set up now update this way instead of by
+  hand. An install deploys 1.4.0
   once to get it.
 
 ## 1.3.0
@@ -328,7 +343,7 @@ out.
   directory, with the tenant and its owner from the archive's manifest. The
   LibrePublish Import plugin (`cms-site-import`) is the button for it.
 - **`CMS_PLUGINS=default`** installs the default plugins alone, for a host
-  such as Hoster that won't keep an empty secret.
+  that won't keep an empty secret.
 
 ### Fixed
 - **Docker builds fetch the default plugins.** The image copies
@@ -349,16 +364,14 @@ out.
   before bundling (`bin/fetch-plugins`).
 - **Settings › Updates**: the newest release and its notes, Check now, and
   an Update button (admins only). A plain install runs `bin/update <tag>` in
-  the background; an install Hoster deploys proposes the tag's deploy to
-  Hoster, approved there (`CMS_HOSTER_URL`, `CMS_HOSTER_TOKEN`,
-  `CMS_HOSTER_ENVIRONMENT_ID`); another Docker install starts the Deploy
-  workflow (`CMS_GITHUB_TOKEN`, `CMS_DEPLOY_DESTINATION`). `CMS_UPDATES`
-  forces hoster, github, local or manual. The page follows a running update until the
+  the background; a Docker install starts the Deploy workflow
+  (`CMS_GITHUB_TOKEN`, `CMS_DEPLOY_DESTINATION`). `CMS_UPDATES` forces
+  github, local or manual. The page follows a running update until the
   install boots on the new version, or says why it failed. `GET /api/updates`,
   `POST /api/updates/check` and `cms updates [check]` read and check, but
   can't start one. `CMS_UPDATE_CHECK=false` turns off the daily check.
-- **Hoster can deploy the CMS** from the repository as it is
-  (docs/install.md › Hoster): one app per site.
+- **A tool that runs Kamal can deploy the CMS** from the repository as it
+  is (docs/install.md): one app per site.
 
 ### Changed
 - **A new look for the admin, styled with Litewind.** The screens are drawn

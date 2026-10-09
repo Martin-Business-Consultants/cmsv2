@@ -148,4 +148,39 @@ RSpec.describe Upgrade do
 
     expect(past.reload.requested_by).to be_nil
   end
+
+  describe "a plugin's update strategy" do
+    it "is a way CMS_UPDATES can name, and one a production install picks once it says it's configured" do
+      register_update_strategy("deployer", configured: false)
+      with_env("CMS_UPDATES" => "deployer") { expect(described_class.via).to eq("deployer") }
+
+      allow(Rails.env).to receive(:production?).and_return(true)
+      allow(Upgrade::InPlace).to receive(:available?).and_return(false)
+      with_env("CMS_UPDATES" => nil, "CMS_GITHUB_TOKEN" => nil) do
+        expect(described_class.via).to eq("manual")
+        Cms::Plugins.enabled_update_strategies["deployer"].configured = true
+        expect(described_class.via).to eq("deployer")
+      end
+    end
+
+    it "starts the update through the plugin's runner" do
+      deployer = register_update_strategy("deployer")
+      newer_release_out
+      with_env("CMS_UPDATES" => "deployer") { described_class.start(by: admin) }
+
+      expect(deployer.started).to be(true)
+      expect(described_class.current).to have_attributes(via: "deployer")
+    end
+
+    it "fails an update whose strategy's plugin has gone, rather than raising on every check" do
+      register_update_strategy("deployer")
+      running = upgrade(via: "deployer")
+      forget_plugin(:deployer)
+
+      running.settle
+
+      expect(running.reload).to be_failed
+      expect(running.message).to include("deployer update strategy isn't installed")
+    end
+  end
 end

@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 # Clones an install's plugins into plugins/ for the Docker build, before
-# bundling (docs/plugins.md). A Kamal install, Hoster's included, clones the
+# bundling (docs/plugins.md). A Kamal install, whatever runs it, clones the
 # repository fresh for every deploy, so plugins installed with
 # `plugins:install` would not survive it; this list is how they do.
 #
@@ -11,7 +11,7 @@
 # #<tag, branch or commit>, separated by spaces, commas or newlines. `-name` leaves a
 # default out (to go without it, or swap in another), "none" installs
 # nothing at all, defaults included, and "default" stands for the defaults
-# alone, for a host such as Hoster that won't keep an empty secret. A secret
+# alone, for a host that won't keep an empty secret. A secret
 # rather than a build arg so a private plugin's URL can carry a token without
 # it landing in the image.
 #

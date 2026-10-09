@@ -15,7 +15,7 @@ bin/setup         # gems, databases, seeds, then bin/dev
 bin/ci            # rubocop, herb lint, bundler-audit, brakeman, rspec, seeds
 ```
 
-- `docs/install.md`: running your own, with Kamal (or Hoster) or as a plain
+- `docs/install.md`: running your own, with Kamal (or a tool that runs it) or as a plain
   checkout, and updating it.
 - `docs/plugins.md`: extending it. `engines/hello` is the reference plugin;
   Forms and Commerce are installed from their own repositories.

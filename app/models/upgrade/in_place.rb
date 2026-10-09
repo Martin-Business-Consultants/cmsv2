@@ -14,7 +14,7 @@ require "digest"
 # Each bundle carries the Ruby its gems were built for (config/bundled_ruby.rb
 # switches to it), so a new Ruby comes this way too. A release that needs
 # other system packages or Debian (CMS_BASE in the Dockerfile) can't: it
-# redeploys through Hoster or GitHub when the install can, else fails with how.
+# redeploys through Upgrade.redeployer when there is one, else fails with how.
 # Plugins installed from Settings › Plugins live in the data volume and carry
 # over; one the image carries that the bundle doesn't (from CMS_PLUGINS)
 # would be lost, so the update refuses and says so.
@@ -24,6 +24,8 @@ class Upgrade::InPlace
   # The release running and the one before it, to go back to by hand.
   KEEP = 2
 
+  def self.label = "In place"
+  def self.description = "This install itself: it downloads the release and restarts on it"
   def self.available? = ENV["CMS_RUNTIME"] == "docker"
   def self.releases = Cms.data_dir.join("releases")
   def self.arch = RbConfig::CONFIG["host_cpu"].in?(%w[aarch64 arm64]) ? "arm64" : "amd64"
@@ -81,19 +83,17 @@ class Upgrade::InPlace
   end
 
   # A bundle needs the same base as this image (its Ruby travels with it).
-  # When it needs a new image, deploy one through Hoster or GitHub if this
-  # install can, else fail with how.
+  # When it needs a new image, deploy one through a strategy that can
+  # (Upgrade.redeployer: a plugin's deploy tool, or GitHub), else fail with how.
   def needs_image?(manifest)
     return false if manifest["base"].to_s == ENV["CMS_BASE"].to_s
 
     reason = "base #{manifest["base"]} (this image has #{ENV["CMS_BASE"].presence || "none"})"
-    via = if Upgrade::Hoster.configured? then "hoster"
-    elsif UpdateCheck::Github.deploy_token? && Upgrade::Github.destination.present? then "github"
-    end
-    raise Failed, "#{tag} needs a new image, for #{reason}. Redeploy it: in Hoster, or `bin/kamal deploy` from a checkout of #{tag}. " \
+    via = Upgrade.redeployer
+    raise Failed, "#{tag} needs a new image, for #{reason}. Redeploy it: with your deploy tool, or `bin/kamal deploy` from a checkout of #{tag}. " \
                   "Data and plugins carry over; later updates come this way again." unless via
 
-    @upgrade.update!(via: via, message: "#{tag} needs a new image, for #{reason}: deploying it through #{via.capitalize}.")
+    @upgrade.update!(via: via, message: "#{tag} needs a new image, for #{reason}: deploying it through #{Upgrade.runners[via].label}.")
     @upgrade.runner.start
     true
   end
@@ -123,7 +123,7 @@ class Upgrade::InPlace
     left_behind = plugins_in(Rails.root) - plugins_in(partial)
     if left_behind.any?
       raise Failed, "This install's image carries #{left_behind.to_sentence} (CMS_PLUGINS), which the #{tag} bundle doesn't, so updating " \
-                    "here would leave #{left_behind.one? ? "it" : "them"} behind. Redeploy instead (in Hoster, or `bin/kamal deploy`), or " \
+                    "here would leave #{left_behind.one? ? "it" : "them"} behind. Redeploy instead (with your deploy tool, or `bin/kamal deploy`), or " \
                     "install #{left_behind.one? ? "it" : "them"} from Settings › Plugins, where plugins carry over. Nothing was changed."
     end
 

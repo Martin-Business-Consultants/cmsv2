@@ -45,8 +45,8 @@
         The install backs up its data, migrates and restarts on <%= @upgrade.to_version %>; until then <%= cms_version %> keeps running.
         This page checks every few seconds.
       </p>
-      <% if @upgrade.via == "hoster" && @upgrade.runner.awaiting_approval? %>
-        <p class="text-sm text-gray-700">Hoster deploys once someone approves it there.</p>
+      <% if (note = @upgrade.runner.try(:note)) %>
+        <p class="text-sm text-gray-700"><%= note %></p>
       <% end %>
       <% if @upgrade.external_url %>
         <p class="text-sm"><%= external_link @upgrade.external_url, upgrade_follow_text(@upgrade) %></p>

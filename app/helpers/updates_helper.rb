@@ -1,16 +1,9 @@
 # frozen_string_literal: true
 
 module UpdatesHelper
+  # How this install updates, in the words of its runner (Upgrade.runners).
   def update_method_description
-    case Upgrade.via
-    when "hoster" then "A deploy proposed to Hoster (#{Upgrade::Hoster.url.presence || "CMS_HOSTER_URL unset"}), approved there"
-    when "github"
-      destination = Upgrade::Github.destination.presence
-      "The Deploy workflow on GitHub (#{UpdateCheck.repo}#{", destination #{destination}" if destination})"
-    when "local" then "bin/update on this server"
-    when "in_place" then "This install itself: it downloads the release and restarts on it"
-    else "By hand: updating from here isn’t set up"
-    end
+    Upgrade.runners[Upgrade.via]&.description || "By hand: updating from here isn’t set up"
   end
 
   # What to run by hand when the button isn't set up: bin/update in a plain
@@ -25,11 +18,7 @@ module UpdatesHelper
 
   # Where a running update can be followed, named for where it runs.
   def upgrade_follow_text(upgrade)
-    case upgrade.via
-    when "hoster" then upgrade.runner.awaiting_approval? ? "Approve the deploy in Hoster" : "Follow the deploy in Hoster"
-    when "github" then "Follow the deploy on GitHub"
-    else "Follow the update"
-    end
+    upgrade.runner.try(:follow_text) || "Follow the update"
   end
 
   def upgrade_requester(upgrade)

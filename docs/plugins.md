@@ -46,7 +46,7 @@ installed from their own repositories (below):
       bin/rails plugins:list
 
   Installing clones the repo, then bundles, migrates and asks Puma to
-  restart. A Docker install (Kamal, Hoster) lists its plugins in the
+  restart. A Docker install (Kamal, or a tool that runs it) lists its plugins in the
   `CMS_PLUGINS` builder secret instead, and each build fetches them into
   `plugins/` before bundling (`bin/fetch-plugins`, docs/install.md).
 
@@ -59,7 +59,7 @@ installed from their own repositories (below):
     with `CMS_PLUGINS`. They stay ordinary plugins, so an install can go
     without one or swap it for another: `plugins:remove` it, or list `-forms`
     in `CMS_PLUGINS`. A Docker install with nothing beyond the defaults sets
-    `CMS_PLUGINS=default`, since Hoster won't keep an empty secret.
+    `CMS_PLUGINS=default`, since some hosts won't keep an empty secret.
 
   Forms and Commerce, which were part of the core, are installed this way
   now. Working on one beside the core, keep its repository next to the
@@ -165,6 +165,7 @@ switches on the plugins it `depends_on` that nobody has switched either.
 | `block_types key, [block type hashes], package: "@org/blocks"` | A block type pack, with the npm package holding its Astro components. |
 | `field_type key, "type", validator: ->(value) { errors }, partial: "…"` | A field type for collection and page schemas. |
 | `deploy_provider key, "provider_key", ProviderClass` | A way to rebuild the site (a `Deploys::Provider` subclass), offered in Settings › Deploy. |
+| `update_strategy key, "via", -> { RunnerClass }` | Another way Settings › Updates can update the install (Update strategies, below). |
 | `webhook_event_filter key, "thing.created", permit: ->(raw) { hash or nil }, validate: ->(value, errors) { … }, match: ->(value, payload) { bool }` | Per-event criteria a webhook stores in `event_filters[event]` (Forms narrows `submission.created` to chosen forms): `permit` is the only shape kept from submitted params, `validate` adds to the webhook's errors, `match` decides a delivery (value nil: no criteria). Pair it with a `:webhook_filters` slot for the form. |
 | `webhook_events key, "Label", %w[thing.created thing.done], after: "submission.created", deploy: false` | Events the plugin announces (`announce("thing.created")` from a model that includes `Eventable`), in `Webhook.events` and `/api/webhooks`. A webhook may subscribe to any installed plugin's events, on or off; the webhook form offers only those of plugins that are on. `deploy: true` makes one schedule a site rebuild. |
 
@@ -206,6 +207,35 @@ order plugins load in (alphabetically) doesn't matter — and may be a list, the
 first one present winning: Commerce's permission group says
 `after: ["Forms", "Globals"]`, so it follows Forms, or Globals when Forms is
 off.
+
+## Update strategies
+
+Settings › Updates updates an install one of a few ways (`Upgrade.via`): the
+core's `local`, `github` and `in_place`, or `manual`. A plugin adds another —
+through a deploy tool the install runs under, say — with
+`update_strategy :key, "via", -> { Runner }`. `CMS_UPDATES=via` picks it, and
+a production install with `CMS_UPDATES` unset picks the first plugin
+strategy whose runner says it's `configured?`.
+
+A runner is a plain class. On the class:
+
+- `label`, `description` — how Settings › Updates names it;
+- `configured?` — whether this install is set up for it;
+- `unavailable_reason` — why the button can't use it yet, or nil;
+- `redeploys?` (optional) — true when it deploys a new image, so an in-place
+  update that needs one goes through it.
+
+`new(upgrade)` takes the Upgrade record, and the instance answers:
+
+- `start` — ask for the deploy, keeping its handle in `upgrade.external_id`
+  and a link in `external_url`;
+- `check` — follow it, and `upgrade.fail_with(message)` when it fails;
+- `timing_out_since` — when the clock started (nil while it's waiting on a
+  person), and `where_to_look` — where to read why after a timeout;
+- `follow_text`, `note` (optional) — the link's label and a line under it.
+
+Raise a subclass of `Upgrade::Error` for an answer that fails the update.
+The update succeeds when the install boots on the new version.
 
 ## The admin menu
 
