@@ -8,6 +8,13 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **A backup leaves out what can be fetched again**: the releases an install
+  updated itself to (`releases/`) and the archives a site was imported from
+  (`site_imports/`). The backup a container takes as it boots with
+  migrations to run copied them all, gigabytes after a few updates, and the
+  site answered 502 until it finished.
+
 ## 1.5.0
 
 ### Fixed

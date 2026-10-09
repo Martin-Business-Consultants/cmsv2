@@ -8,7 +8,11 @@ require "time"
 module Cms
   # A copy of an install's whole data directory (CMS_DATA_DIR: every SQLite
   # database and every uploaded file) as one .tar.gz, taken before bin/update
-  # or a container boot migrates anything. Databases are copied with SQLite's
+  # or a container boot migrates anything. What can be fetched again is left
+  # out: the releases an install updated itself to (releases/, half a
+  # gigabyte each) and the archives a site was imported from (site_imports/),
+  # which would make every boot after an update copy gigabytes before the
+  # site comes up. Databases are copied with SQLite's
   # online backup API, so a copy taken while the app is running is consistent
   # (WAL included); everything else is copied as files.
   #
@@ -19,6 +23,8 @@ module Cms
   class DataBackup
     DEFAULT_KEEP = 5
     SQLITE_SIDECARS = /-(wal|shm|journal)\z/
+    # Directories in the data directory a backup leaves out (besides its own).
+    REFETCHABLE = %w[releases site_imports].freeze
 
     attr_reader :data_dir, :backup_dir, :keep
 
@@ -109,7 +115,7 @@ module Cms
     def copy_into(staging)
       Dir.children(data_dir).each do |entry|
         source = File.join(data_dir, entry)
-        next if File.expand_path(source) == backup_dir || entry.match?(SQLITE_SIDECARS)
+        next if File.expand_path(source) == backup_dir || entry.match?(SQLITE_SIDECARS) || REFETCHABLE.include?(entry)
 
         if entry.end_with?(".sqlite3")
           backup_database(source, File.join(staging, entry))

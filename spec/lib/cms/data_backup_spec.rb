@@ -16,13 +16,19 @@ RSpec.describe Cms::DataBackup do
     db.execute("INSERT INTO t VALUES ('kept')")
     data_dir.join("ab/cd").mkpath
     data_dir.join("ab/cd/blob").write("uploaded")
+    data_dir.join("plugins/seo").mkpath
+    data_dir.join("plugins/seo/seo.gemspec").write("")
+    data_dir.join("releases/v9.9.9").mkpath
+    data_dir.join("releases/v9.9.9/VERSION").write("9.9.9")
+    data_dir.join("site_imports/1").mkpath
+    data_dir.join("site_imports/1/archive.tar.gz").write("big")
 
     archive = described_class.new(data_dir: data_dir).call
 
     expect(archive).to start_with(data_dir.join("backups").to_s)
     entries = archive_entries(archive)
-    expect(entries).to include("./production.sqlite3", "./ab/cd/blob")
-    expect(entries.grep(/backups|-wal|-shm/)).to be_empty
+    expect(entries).to include("./production.sqlite3", "./ab/cd/blob", "./plugins/seo/seo.gemspec")
+    expect(entries.grep(/backups|-wal|-shm|releases|site_imports/)).to be_empty
 
     Dir.mktmpdir do |out|
       system("tar", "-xzf", archive, "-C", out, exception: true)
