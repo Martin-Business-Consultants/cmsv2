@@ -43,4 +43,41 @@ RSpec.describe Trash do
     expect(described_class.purge_expired(30.days.ago)).to eq("Page" => 1)
     expect(Page.with_discarded.pluck(:id)).to eq([fresh.id])
   end
+
+  it "keeps purging past a record that can't be deleted, and reports it" do
+    stuck = page("stuck").tap(&:discard!)
+    gone = page("gone").tap(&:discard!)
+    allow_any_instance_of(Page).to receive(:destroy_permanently!).and_wrap_original do |original, *args|
+      raise ActiveRecord::InvalidForeignKey, "held" if original.receiver.id == stuck.id
+
+      original.call(*args)
+    end
+    allow(Rails.error).to receive(:report)
+
+    expect(described_class.purge_expired(1.minute.from_now)).to eq("Page" => 1)
+    expect(Page.with_discarded.pluck(:id)).to eq([stuck.id])
+    expect(Page.with_discarded.exists?(gone.id)).to be(false)
+    expect(Rails.error).to have_received(:report).with(an_instance_of(ActiveRecord::InvalidForeignKey), hash_including(handled: true))
+  end
+
+  it "records a purge only when the record went" do
+    record = page("held").tap(&:discard!)
+    allow(record).to receive(:destroy_permanently!).and_raise(ActiveRecord::InvalidForeignKey, "held")
+
+    expect { described_class.purge("page", record) }.to raise_error(ActiveRecord::InvalidForeignKey)
+    expect(AuditLog.where(action: "trash.purged")).to be_empty
+  end
+
+  it "purges a category entry other entries still use, leaving them uncategorized" do
+    categories = Collection.create!(slug: "kinds", name: "Kinds", schema: {"fields" => []})
+    posts = Collection.create!(slug: "posts", name: "Posts", schema: {"fields" => []}, categories_collection: categories)
+    category = categories.entries.create!(slug: "news", title: "News", status: "published")
+    post = posts.entries.create!(slug: "hello", title: "Hello", status: "published", category_entry_id: category.id)
+    on_page = page("about").tap { it.update_column(:category_entry_id, category.id) }
+    category.discard!
+
+    expect(described_class.purge_expired(1.minute.from_now)).to eq("CollectionEntry" => 1)
+    expect(post.reload.category_entry_id).to be_nil
+    expect(on_page.reload.category_entry_id).to be_nil
+  end
 end

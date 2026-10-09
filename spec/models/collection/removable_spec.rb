@@ -27,4 +27,22 @@ RSpec.describe Collection::Removable do
   it "records nothing for an empty set" do
     expect { Collection.remove_all([]) }.not_to change(AuditLog, :count)
   end
+
+  it "deletes a set all or nothing" do
+    kept = make("kept")
+    held = make("held")
+    allow(held).to receive(:destroy!).and_raise(ActiveRecord::RecordNotDestroyed, "held")
+
+    expect { Collection.remove_all([kept, held]) }.to raise_error(ActiveRecord::RecordNotDestroyed)
+    expect(Collection.where(slug: %w[kept held]).count).to eq(2)
+  end
+
+  it "deletes a collection another one draws its categories and tags from" do
+    pool = make("pool")
+    posts = Collection.create!(slug: "posts", name: "Posts", schema: {"fields" => []}, categories_collection: pool, tags_collection: pool)
+
+    pool.remove
+
+    expect(posts.reload).to have_attributes(categories_collection_id: nil, tags_collection_id: nil)
+  end
 end

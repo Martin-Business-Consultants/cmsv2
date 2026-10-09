@@ -8,9 +8,10 @@ module Collection::Removable
 
   class_methods do
     # Deletes each collection and records one event naming the ones found.
+    # All or nothing: a collection that can't be deleted leaves every one.
     def remove_all(collections)
       slugs = collections.map(&:slug)
-      collections.each(&:destroy!)
+      transaction { collections.each(&:destroy!) }
       track_event(:bulk_deleted, count: collections.size, slugs: slugs) if collections.any?
       collections
     end

@@ -54,20 +54,27 @@ module Trash
   end
 
   # Hard-deletes what has been in the trash since before `cutoff`. Returns
-  # the count per model name.
+  # the count per model name. Each record goes on its own: one that can't be
+  # deleted is reported (Rails.error) and stays for tomorrow, rather than
+  # stopping every purge after it, night after night.
   def purge_expired(cutoff)
     models.each_with_object(Hash.new(0)) do |klass, purged|
       klass.discarded.where("deleted_at <= ?", cutoff).find_each do |record|
         record.destroy_permanently!
         purged[klass.name] += 1
+      rescue StandardError => error
+        Rails.error.report(error, handled: true, context: {purge: klass.name, id: record.id})
       end
     end
   end
 
-  # Recorded first: the row can't be described once it's gone.
+  # Recorded first, in the same transaction: the row can't be described once
+  # the record is gone, and mustn't say it went if it didn't.
   def purge(kind, record)
-    Event.record("trash.purged", target: record, kind: kind, target_label: AuditLog.describe_target(record))
-    record.destroy_permanently!
+    record.transaction do
+      Event.record("trash.purged", target: record, kind: kind, target_label: AuditLog.describe_target(record))
+      record.destroy_permanently!
+    end
   end
 
   # {"page" => Page, …}

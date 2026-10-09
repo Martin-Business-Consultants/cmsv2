@@ -49,4 +49,15 @@ RSpec.describe Page::Treeable do
 
     expect(Page.with_discarded.find(team.id)).to be_discarded
   end
+
+  it "renames a page and its descendants' paths together, or not at all" do
+    parent = Page.create!(slug: "guide", title: "Guide", status: "draft", locale: "en")
+    child = Page.create!(slug: "start", title: "Start", status: "draft", locale: "en", parent: parent)
+    allow(Page).to receive(:where).and_call_original
+    allow(Page).to receive(:where).with(id: child.id).and_raise(ActiveRecord::StatementInvalid, "disk full")
+
+    expect { parent.update!(slug: "handbook") }.to raise_error(ActiveRecord::StatementInvalid)
+    expect(parent.reload.path).to eq("guide")
+    expect(child.reload.path).to eq("guide/start")
+  end
 end

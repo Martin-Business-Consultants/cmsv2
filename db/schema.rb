@@ -540,21 +540,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_tokens", "users"
-  add_foreign_key "collection_entries", "collection_entries", column: "category_entry_id"
+  add_foreign_key "collection_entries", "collection_entries", column: "category_entry_id", on_delete: :nullify
   add_foreign_key "collection_entries", "collections"
   add_foreign_key "collection_entries", "translation_groups"
   add_foreign_key "collection_entry_versions", "collection_entries"
-  add_foreign_key "collection_entry_versions", "users", column: "author_id"
-  add_foreign_key "collections", "collections", column: "categories_collection_id"
-  add_foreign_key "collections", "collections", column: "tags_collection_id"
-  add_foreign_key "device_authorizations", "users"
+  add_foreign_key "collection_entry_versions", "users", column: "author_id", on_delete: :nullify
+  add_foreign_key "collections", "collections", column: "categories_collection_id", on_delete: :nullify
+  add_foreign_key "collections", "collections", column: "tags_collection_id", on_delete: :nullify
+  add_foreign_key "device_authorizations", "users", on_delete: :cascade
   add_foreign_key "form_emails", "forms", on_delete: :cascade
   add_foreign_key "form_submissions", "forms"
   add_foreign_key "hello_greetings", "users"
   add_foreign_key "invoices", "quote_requests"
   add_foreign_key "page_versions", "pages"
-  add_foreign_key "page_versions", "users", column: "author_id"
-  add_foreign_key "pages", "collection_entries", column: "category_entry_id"
+  add_foreign_key "page_versions", "users", column: "author_id", on_delete: :nullify
+  add_foreign_key "pages", "collection_entries", column: "category_entry_id", on_delete: :nullify
   add_foreign_key "pages", "pages", column: "parent_id"
   add_foreign_key "pages", "translation_groups"
   add_foreign_key "plugin_changes", "users", column: "requested_by_id", on_delete: :nullify
