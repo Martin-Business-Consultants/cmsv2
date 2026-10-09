@@ -17,6 +17,16 @@ class Api::V1::BaseController < Api::BaseController
 
   MAX_PER = 100
 
+  # Per token, across the whole delivery API. A build reads it about ten
+  # times; a site rendered on demand reads it on each Cloudflare cache miss,
+  # so the default is generous. CMS_DELIVERY_RATE_LIMIT sets requests a
+  # minute (0 turns it off).
+  RATE_LIMIT = ENV.fetch("CMS_DELIVERY_RATE_LIMIT", "1200").to_i
+
+  rate_limit to: RATE_LIMIT, within: 1.minute, scope: "api/v1", if: -> { RATE_LIMIT.positive? },
+    by: -> { Current.api_token ? "#{Current.api_token.class.name}:#{Current.api_token.id}" : request.remote_ip },
+    with: -> { render_rate_limited }
+
   private
 
   def paginate(scope)

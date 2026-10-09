@@ -18,6 +18,45 @@ Authenticate with the site's service token (Settings › Service tokens, the
   (`w640`, `w1280`, `w1920`). Present when a media library is installed.
 - `Cache-Tag` header: the tags a publish purges (below).
 
+## Errors
+
+Every `/api` error — the delivery API's and the management API's — is JSON
+in one shape:
+
+    {"error": "<code>", "message": "…"}
+
+with `errors` (per field) on a 422 and `capability` (what the role lacks) on
+a 403. The codes: `bad_request` (400: a missing parameter, a body that isn't
+JSON), `unauthorized` (401), `forbidden` (403), `not_found` (404, also for an
+`/api` path no route matches), `not_acceptable` (406: a format the endpoint
+doesn't serve), `conflict` (409), `invalid` (422), `rate_limited` (429, with
+`Retry-After`) and `internal_error` (500, never with a backtrace).
+
+## Caching and limits
+
+- **Conditional GET.** Every answer carries an `ETag`; send it back as
+  `If-None-Match` and an unchanged answer is `304 Not Modified`. For
+  `/content` the tag stands for the content it was built from, not its
+  bytes (each read carries a fresh `meta.cursor`): on a 304, keep what you
+  have, cursor included.
+- **The CMS caches `/content`** while nothing it's built from changes
+  (DeliveryVersion); `included.assets` is resolved on every read.
+- **Rate limit.** Each token gets 1,200 requests a minute across `/api/v1`
+  (`CMS_DELIVERY_RATE_LIMIT`, requests a minute, `0` for none); past it,
+  `429` with `Retry-After`. A build reads about ten times; a site rendered on
+  demand reads on each cache miss, so raise it for a busy one.
+- **Lists.** Pages and entries are paged (`meta.next_page`); `/content`,
+  `/globals`, `/collections`, `/redirects`, `/schema` and `/sitemap` answer
+  whole — they're a site's configuration and what a build reads in one go,
+  bounded by the site itself.
+
+**`/api` pages differently, on purpose.** The management API's lists keep the
+shape they've always had, `{"<items>": […], "page", "per", "total"}` at the
+top level (references add `total_pages`); `/api/v1` puts paging in `meta`
+with `next_page`. `/api`'s contract is frozen — the CLI, Lumin and agents
+read it — so it won't move to v1's shape; a new client reading lists should
+use `/api/v1`.
+
 ## Endpoints
 
 | Endpoint | What |

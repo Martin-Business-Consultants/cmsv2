@@ -102,6 +102,24 @@ out.
   nothing.
 - **A redirect import reads its CSV a row at a time** and refuses one over
   5 MB (`413` from `/api/redirects/import`).
+### Added
+- **The delivery API answers an unchanged read with 304, caches `/content`,
+  and limits each token.** `/content`'s `ETag` stands for the content it was
+  built from (not its bytes, which carry a fresh cursor), so a build that
+  sends it back gets `304`; its `data` is cached until a page, entry,
+  global, collection, tag, translation or setting changes, with assets
+  resolved fresh. Each token gets 1,200 requests a minute across `/api/v1`
+  (`CMS_DELIVERY_RATE_LIMIT`, `0` for none), then `429` with `Retry-After`.
+
+### Fixed
+- **Every `/api` error is JSON in one shape**, `{"error", "message"}`: a
+  missing parameter or a body that isn't JSON is a `400`, a format the
+  endpoint doesn't serve a `406`, a lost race a `409`, an `/api` path no
+  route matches a JSON `404`, and anything unexpected a `500` that's
+  reported and never shows a backtrace. Before, these came back in Rails'
+  `{"status", "error"}` shape, or as an HTML page. The bodies the API
+  already answered (`not_found`, `invalid`, `forbidden` with its
+  `capability`) are unchanged.
 
 ## 1.5.4
 
