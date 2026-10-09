@@ -65,7 +65,7 @@ RSpec.describe PluginChange do
       expect(installed.join("lib/thing.rb")).to exist
       expect(InstalledPlugins.metadata("thing")).to include("repo" => "acme/cms-thing", "version" => "1.2.0", "tag" => "v1.2.0")
       expect(InstalledPlugins.directory.children.map { it.basename.to_s }).to eq(["thing"])
-      expect(Cms::Restart).to have_received(:later)
+      expect(Cms::Restart).to have_received(:later).with(report: change.report)
     end
 
     it "fails a release that isn't a plugin, and leaves nothing behind" do
@@ -129,6 +129,32 @@ RSpec.describe PluginChange do
       expect(update.reload).to have_attributes(status: "failed", message: "thing 1.2.0 didn't load (NameError: boom); 1.1.0 is back.")
       expect(installed.join("old.txt").read).to eq("1.1.0")
       expect(Cms::Restart).to have_received(:later)
+    end
+
+    it "fails at once, with what it said, when the restart after it failed, and an update goes back" do
+      update = described_class.create!(action: "update", repo: "acme/cms-thing", key: "thing", from_version: "1.1.0", to_version: "1.2.0")
+      installed.join("lib").mkpath
+      InstalledPlugins.directory.join(".thing.previous").mkpath
+      InstalledPlugins.directory.join(".thing.previous/old.txt").write("1.1.0")
+      update.report.mkpath
+      update.report.join("restart.log").write("Migrating to CreateThings\nActiveRecord::StatementInvalid: table things already exists\n")
+      update.report.join("exit_status").write("1\n")
+
+      described_class.reconcile
+
+      expect(update.reload).to have_attributes(status: "failed",
+        message: a_string_matching(/restart after updating thing to 1\.2\.0 failed \(exit 1\).*table things already exists/m))
+      expect(installed.join("old.txt").read).to eq("1.1.0")
+    end
+
+    it "waits on a restart that hasn't finished, or finished well" do
+      change.report.mkpath
+      described_class.reconcile
+      expect(change.reload).to be_running
+
+      change.report.join("exit_status").write("0\n")
+      described_class.reconcile
+      expect(change.reload).to be_running
     end
 
     it "gives up on one that went quiet" do

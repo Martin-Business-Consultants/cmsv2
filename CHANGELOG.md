@@ -8,6 +8,15 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **A plugin's install, update or removal no longer waits 15 minutes when
+  the restart after it fails.** The migrate and restart that follow it now
+  write to the install's log (the container's, in Docker) and to the data
+  directory (`plugin_changes/<n>/`), and Settings › Plugins fails the change
+  at once with the end of what they said; an update goes back to the
+  release before. Before, a migration that broke there left the change
+  "running" with its output in a file inside the app.
+
 ## 1.5.2
 
 ### Changed

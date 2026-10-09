@@ -78,7 +78,7 @@ class PluginChange < ApplicationRecord
   # Run by PluginChangeJob. True once the change is in place and waits on the restart.
   def perform(restart: true)
     (action == "remove") ? take_out : put_in(latest_tag)
-    Cms::Restart.later if restart
+    Cms::Restart.later(report: report) if restart
     true
   rescue Failed, UpdateCheck::Github::Error, SystemCallError, RuntimeError, JSON::ParserError => error
     fail_with error.message
@@ -88,19 +88,25 @@ class PluginChange < ApplicationRecord
   end
 
   def reconcile
-    if InstalledPlugins.failed[key] && action != "remove"
+    if restart_failed?
+      roll_back
+      fail_with "The restart after #{summary.downcase_first} failed (exit #{report.join("exit_status").read.strip}):\n#{restart_output}"
+    elsif InstalledPlugins.failed[key] && action != "remove"
       roll_back
       fail_with "#{key} #{to_version} didn't load (#{InstalledPlugins.failed[key]})#{"; #{from_version} is back" if action == "update"}."
     elsif done?
       update!(status: "succeeded", finished_at: Time.current)
     elsif created_at < TIMEOUT.ago
-      fail_with "No word after #{TIMEOUT.inspect}. log/restart.log says what happened."
+      fail_with "No word after #{TIMEOUT.inspect}. The install's log, or #{report.join("restart.log")}, says what happened."
     end
   end
 
   def fail_with(message)
     update!(status: "failed", finished_at: Time.current, message: message)
   end
+
+  # Where the restart after it says how it went (Cms::Restart.later).
+  def report = Cms.data_dir.join("plugin_changes", id.to_s)
 
   def running? = status == "running"
   def succeeded? = status == "succeeded"
@@ -124,6 +130,13 @@ class PluginChange < ApplicationRecord
   def target = InstalledPlugins.directory.join(key)
   def previous = InstalledPlugins.directory.join(".#{key}.previous")
   def scratch = @scratch ||= InstalledPlugins.directory.join(".download-#{id}").tap { FileUtils.mkdir_p(it) }
+
+  def restart_failed?
+    status = report.join("exit_status")
+    status.file? && status.read.strip.then { it.present? && it != "0" }
+  end
+
+  def restart_output = report.join("restart.log").then { it.file? ? it.readlines.last(20).join : "(no output)" }
 
   def done?
     if action == "remove"

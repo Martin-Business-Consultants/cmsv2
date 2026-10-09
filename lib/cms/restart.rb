@@ -23,11 +23,19 @@ module Cms
       end
     end
 
-    def later(delay: 5)
-      log = Rails.root.join("log/restart.log").to_s
+    # The migrate and the restart run in a process of their own. What they
+    # say goes to the install's log (this process's stdout, the container's
+    # in Docker) and to `report`/restart.log, and how it ended to
+    # `report`/exit_status, so whoever asked can tell a restart that failed
+    # (a migration that broke) from one still coming (PluginChange).
+    def later(delay: 5, report: Rails.root.join("log"))
+      FileUtils.mkdir_p(report)
+      log, status = File.join(report, "restart.log"), File.join(report, "exit_status")
+      FileUtils.rm_f(status)
+      script = %(sleep #{Integer(delay)}; { bin/rails db:migrate && bin/rails restart; } 2>&1 | tee "$1"; echo "${PIPESTATUS[0]}" > "$2")
       Bundler.with_unbundled_env do
-        pid = Process.spawn("/bin/bash", "-c", %(sleep #{Integer(delay)}; bin/rails db:migrate && bin/rails restart),
-          chdir: Rails.root.to_s, pgroup: true, in: File::NULL, out: log, err: [:child, :out])
+        pid = Process.spawn("/bin/bash", "-c", script, "restart", log, status,
+          chdir: Rails.root.to_s, pgroup: true, in: File::NULL, out: $stdout, err: [:child, :out])
         Process.detach(pid)
       end
     end
