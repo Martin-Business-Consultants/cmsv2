@@ -21,6 +21,7 @@ class Setting < ApplicationRecord
   # open: every integration this CMS grows brings one, and none of them is
   # ever queried BY value, so there is nothing a column would buy.
   encrypts :secrets
+  include ForgetsUnreadable
 
   validates :key, presence: true, uniqueness: true
 
@@ -69,6 +70,7 @@ class Setting < ApplicationRecord
   # would read as "configured" everywhere that checks `.present?`.
   def self.set_secret(key, attrs)
     record = find_or_initialize_by(key: key.to_s)
+    record.forget_unreadable(:secrets) if record.persisted?
     merged = record.secrets_hash.merge(attrs.deep_stringify_keys)
     merged = merged.reject { |_, value| value.to_s.strip.empty? }
     record.secrets = merged.empty? ? nil : JSON.generate(merged)

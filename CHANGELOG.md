@@ -8,6 +8,14 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **A token or secret encrypted with another install's key can be replaced.**
+  Rotating an API token or a service token, re-entering a setting's secret,
+  and `cms login` (which rotates a token it can't show) all failed on one,
+  because saving read the old value first; it's cleared before the new one
+  is written. `cms login` and the agent installer answered 500 on a site
+  moved from the old shared deployment.
+
 ## 1.5.3
 
 ### Fixed

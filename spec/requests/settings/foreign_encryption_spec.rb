@@ -32,6 +32,43 @@ RSpec.describe "Values encrypted with another install's key", type: :request do
     expect(response).to have_http_status(:gone)
   end
 
+  it "rotates a token it can't read, so it can be shown again" do
+    token = ApiToken.for(admin)
+    write_raw(ApiToken, :token, foreign("mbc_old"), token.id)
+
+    post settings_api_token_rotation_path
+
+    expect(token.reload.visible?).to be(true)
+    expect(ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin).tap { write_raw(ServiceToken, :token, foreign("mbcs_old"), it.id) }
+      .reload.rotate!).to start_with(ServiceToken::PREFIX)
+  end
+
+  # cms login (the agent installer): the CLI waits, someone approves, and the
+  # next poll hands over the person's token, rotating one that can't be read.
+  it "lets the CLI log in as someone whose token it can't read" do
+    write_raw(ApiToken, :token, foreign("mbc_old"), ApiToken.for(admin).id)
+    post "/api/device/code", params: {hostname: "laptop"}
+    device_code = JSON.parse(response.body)["device_code"]
+
+    post "/api/device/token", params: {device_code: device_code}
+    expect(response).to have_http_status(:accepted)
+
+    DeviceAuthorization.find_by(device_code: device_code).approve!(admin)
+    post "/api/device/token", params: {device_code: device_code}
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body).to_s).to include(ApiToken::PREFIX)
+  end
+
+  it "takes a new secret over one it can't read" do
+    record = Setting.find_or_create_by!(key: "github")
+    write_raw(Setting, :secrets, foreign({token: "ghp_old"}.to_json), record.id)
+
+    Setting.set_secret("github", token: "ghp_new")
+
+    expect(Setting.secret("github", "token")).to eq("ghp_new")
+  end
+
   it "shows the service tokens page with one it can't read" do
     service = ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin)
     write_raw(ServiceToken, :token, foreign("mbcs_old"), service.id)

@@ -38,6 +38,7 @@ class ApiToken < ApplicationRecord
   # Non-deterministic: nothing ever queries by plaintext (that's the
   # digest's job), so there's no reason to accept the weaker mode.
   encrypts :token
+  include ForgetsUnreadable
 
   belongs_to :user
 
@@ -94,6 +95,7 @@ class ApiToken < ApplicationRecord
   # so anything using it has to be updated.
   def rotate!
     plaintext = self.class.generate_plaintext
+    forget_unreadable(:token)
     update!(**self.class.columns_for(plaintext), last_used_at: nil, last_used_ip: nil)
     track_event(:rotated, prefix: prefix)
     plaintext

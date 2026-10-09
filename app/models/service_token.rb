@@ -31,6 +31,7 @@ class ServiceToken < ApplicationRecord
   USE_THROTTLE = 1.minute
 
   encrypts :token
+  include ForgetsUnreadable
 
   belongs_to :role
   belongs_to :created_by, class_name: "User", optional: true
@@ -117,6 +118,7 @@ class ServiceToken < ApplicationRecord
 
   def rotate!
     plaintext = self.class.generate_plaintext
+    forget_unreadable(:token)
     update!(**self.class.columns_for(plaintext), last_used_at: nil, last_used_ip: nil)
     track_event(:rotated, name: name)
     plaintext
