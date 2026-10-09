@@ -63,7 +63,8 @@ RSpec.describe SiteBackup do
     kept = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("kept"), filename: "kept.txt")
     gone = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("gone"), filename: "gone.txt")
     ActiveStorage::Attachment.create!(name: "file", record: page, blob: kept)
-    ActiveStorage::Attachment.create!(name: "other", record: page, blob: gone)
+    # Attaching touches the page, which bumps its lock_version.
+    ActiveStorage::Attachment.create!(name: "other", record: page.reload, blob: gone)
     missing_key = gone.key
     File.delete(ActiveStorage::Blob.service.path_for(missing_key))
 
