@@ -16,6 +16,7 @@ checkout with `bin/install`.
 | `SITE_KEY` | What the API calls the site — the `tenant` field of webhook envelopes, `/api/manifest` and device login, which Lumin matches on (`Site#cms_key`). Defaults to the first label of `APP_HOST`. Keep it when a site changes host. |
 | `CMS_DATA_DIR` | Databases (`production.sqlite3`, `_cache`, `_queue`, `_cable`), Active Storage files, and `backups/`. Default `storage/` in the app. |
 | `SECRET_KEY_BASE`, `AR_ENCRYPTION_PRIMARY_KEY`, `AR_ENCRYPTION_DETERMINISTIC_KEY`, `AR_ENCRYPTION_KEY_DERIVATION_SALT` | The install's secrets. Losing them loses the sessions and every encrypted value (API tokens, integration keys). Without the `AR_ENCRYPTION_*` keys, encryption keys derive from `SECRET_KEY_BASE`. |
+| `CMS_PREVIOUS_SECRET_KEY_BASE` | Another install's `secret_key_base`, so values it encrypted stay readable here: a site moved from the old shared deployment, or an install whose `SECRET_KEY_BASE` changed. This install still writes with its own keys; `bin/rails cms:reencrypt` rewrites everything with them, after which this can go. |
 | `SMTP_ADDRESS`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Outbound mail. The address, port and username default to Outsend's relay (`smtp.getoutsend.com`, 2587, `outsend`); the password is its API key. |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | The sender of the install's own mail (password resets, invitations), and the fallback for the site's. Default `noreply@<APP_HOST>`, `LibrePublish`. |
 | `APP_PROTOCOL` | `https` (default) or `http`, for links. |
@@ -56,9 +57,10 @@ environment's destination from its hosts, domains, variables and secrets.
 2. Attach a server and a domain to its environment.
 3. Variables: `APP_HOST`, `SITE_KEY`, `MAIL_FROM_ADDRESS`, and
    `ASSUME_SSL=true` behind Cloudflare.
-4. Secrets: `SECRET_KEY_BASE` and the three `AR_ENCRYPTION_*` keys for a new
-   site, or only `SECRET_KEY_BASE` (the old install's) for one moved from the
-   old shared install; `SMTP_PASSWORD`; `CMS_PLUGINS` if it has plugins.
+4. Secrets: `SECRET_KEY_BASE` and the three `AR_ENCRYPTION_*` keys; for a
+   site moved from the old shared install, also `CMS_PREVIOUS_SECRET_KEY_BASE`
+   (the old install's `secret_key_base`, below); `SMTP_PASSWORD`;
+   `CMS_PLUGINS` if it has plugins.
 5. Nothing, for Settings › Updates: its Update button updates the install in
    place (Updating, below). To have it propose a deploy to Hoster instead,
    set `CMS_HOSTER_URL`, `CMS_HOSTER_TOKEN` (a Hoster API token with write
@@ -287,10 +289,14 @@ copied or missing, the owner, and a count of each table.
 
 Before and after:
 
-- Give the install the old deployment's `SECRET_KEY_BASE` and **no**
-  `AR_ENCRYPTION_*` of its own, so its encrypted API
-  tokens and integration keys stay readable. The task warns about any it
-  can't read; those have to be re-entered.
+- Give the install `CMS_PREVIOUS_SECRET_KEY_BASE`: the old deployment's
+  `secret_key_base` (in its Rails credentials: `bin/rails credentials:show`
+  in its checkout), so the API tokens, service tokens and integration keys
+  it encrypted stay readable here. The install keeps its own
+  `SECRET_KEY_BASE` and keys and writes with them. The task warns about any
+  value it can't read. Once the site runs here, `bin/rails cms:reencrypt`
+  rewrites them all with this install's keys, and the variable can go. (A
+  value nothing can read can only be re-entered, or the token rotated.)
 - Set `SITE_KEY` to the old subdomain and keep `<sub>.librepublish.com` as
   `APP_HOST` (the task prints both), so existing tokens, CLI profiles, Lumin
   and the Astro site keep working.

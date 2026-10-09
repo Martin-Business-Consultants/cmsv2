@@ -367,7 +367,7 @@ class TenantImport
     @out.puts "  records: " + counts_now.map { |table, n| "#{table} #{n}" }.join(", ")
     if undecryptable.any?
       @warnings << "encrypted values this install can't read (#{undecryptable.map { |column, n| "#{column} × #{n}" }.join(", ")}): " \
-                   "give it the old deployment's SECRET_KEY_BASE and no AR_ENCRYPTION_* of its own, or re-enter them"
+                   "set CMS_PREVIOUS_SECRET_KEY_BASE to the old deployment's secret_key_base (then bin/rails cms:reencrypt), or re-enter them"
     end
   end
 

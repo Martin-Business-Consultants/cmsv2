@@ -8,6 +8,14 @@ out.
 
 ## Unreleased
 
+### Added
+- **`CMS_PREVIOUS_SECRET_KEY_BASE`** keeps values another install encrypted
+  readable here: a site moved from the old shared deployment sets it to that
+  deployment's `secret_key_base`, and its API tokens, service tokens and
+  integration keys can be shown and used again, while the install keeps its
+  own keys and writes with them. `bin/rails cms:reencrypt` then rewrites
+  every encrypted value with this install's keys, so the variable can go.
+
 ## 1.4.1
 
 ### Fixed

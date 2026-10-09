@@ -41,6 +41,16 @@ namespace :cms do
     abort e.message
   end
 
+  desc "Rewrite every encrypted value (tokens, settings' secrets) with this install's keys, after CMS_PREVIOUS_SECRET_KEY_BASE has made a moved site's readable"
+  task reencrypt: :environment do
+    tally = EncryptedValues.reencrypt
+    puts "Rewrote #{tally[:rewritten]} record(s) with this install's keys."
+    if tally[:unreadable].positive?
+      abort "#{tally[:unreadable]} record(s) no key here can read: set CMS_PREVIOUS_SECRET_KEY_BASE to the secret_key_base they were written with, or rotate them."
+    end
+    puts "CMS_PREVIOUS_SECRET_KEY_BASE can go now." if ENV["CMS_PREVIOUS_SECRET_KEY_BASE"].present?
+  end
+
   desc "Reset a user's password (default: the first admin) and print the new one"
   task :reset_admin_password, [:email] => :environment do |_, args|
     user =
