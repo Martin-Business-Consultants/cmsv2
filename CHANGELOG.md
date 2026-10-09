@@ -8,6 +8,31 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **A plugin that starts on, installed into a running site, is set up.** Forms
+  or Media installed after the roles existed (`plugins:install`, Settings ›
+  Plugins, `CMS_PLUGINS`, an upgrade) never gave them its defaults, so the
+  site's Production site token got 403 reading its forms. `bin/rails
+  plugins:settle`, run after every `db:migrate` and `db:prepare`, sets such a
+  plugin up once, granting its defaults only to built-in roles holding none of
+  its capabilities.
+- **No drafts on the site through a collection list.** A `collection_list`
+  set to show any status listed draft entries in `/api/v1`; the delivery API
+  now lists only published ones. Each listed entry carries its `url` and
+  `collection`, and `contact_info` gives the business's details only.
+- **Publishing an entry purges the pages listing it** on a site rendered on
+  demand: a page's `Cache-Tag` names the collections its lists show.
+- **Changing the site's name, URL or contact details** in Settings › General
+  rebuilds or purges the site, like a publish.
+
+### Changed
+- **The Astro integration is one package from its own repository**,
+  [libre-cms-astro](https://github.com/Martin-Business-Consultants/libre-cms-astro),
+  with Forms, Media and Commerce in it. `/frontend/install.sh` installs it
+  from there and no longer adds `@librepublish/astro-forms` or `-commerce`.
+- `/api/v1/site`'s `meta.cms_url` gives the CMS's own address, which asset
+  URLs start with.
+
 ## 1.4.2
 
 ### Added
