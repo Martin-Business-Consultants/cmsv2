@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.5.4
+
 ### Fixed
 - **A token or secret encrypted with another install's key can be replaced.**
   Rotating an API token or a service token, re-entering a setting's secret,
