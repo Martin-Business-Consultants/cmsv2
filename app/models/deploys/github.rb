@@ -38,7 +38,7 @@ class Deploys::Github < Deploys::Provider
       "Accept"               => "application/vnd.github+json",
       "X-GitHub-Api-Version" => "2022-11-28",
       "Content-Type"         => "application/json",
-      "User-Agent"           => "mbc-cms-deploy/1"
+      "User-Agent"           => "librepublish-deploy/1"
     })
     request.body = JSON.generate(event_type: EVENT_TYPE, client_payload: client_payload(reason, changes))
     attempt_from(http.request(request), nil)

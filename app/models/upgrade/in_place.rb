@@ -2,8 +2,8 @@
 
 require "digest"
 
-# Updates a Docker install in place, the way WordPress updates itself (and
-# Runwell does): downloads the release's bundle (the app as its image holds
+# Updates a Docker install in place, the way WordPress updates itself:
+# downloads the release's bundle (the app as its image holds
 # it, gems, compiled assets and the default plugins included, built for each
 # architecture by .github/workflows/release.yml) into releases/ in the data
 # directory, checks it, points releases/current at it and restarts the

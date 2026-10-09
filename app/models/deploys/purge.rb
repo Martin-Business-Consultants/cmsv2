@@ -25,7 +25,7 @@ module Deploys::Purge
     uri, http = OutboundUrl.connect(url, open_timeout: Deploys::Provider::OPEN_TIMEOUT, read_timeout: Deploys::Provider::READ_TIMEOUT)
     request = Net::HTTP::Post.new(uri.request_uri, {
       "Content-Type"    => "application/json",
-      "User-Agent"      => "mbc-cms-deploy/1",
+      "User-Agent"      => "librepublish-deploy/1",
       "X-CMS-Event"     => EVENT,
       "X-CMS-Signature" => signature(body, secret)
     })

@@ -3,8 +3,8 @@
 # Swarms — a standing team of agents that work the site on a determinate
 # rota, each member with its own cadence and model.
 #
-# `content_scopes` is one polymorphic table rather than the two parallel
-# target tables Lumin/ads carries. Scoping means the same thing wherever it
+# `content_scopes` is one polymorphic table rather than parallel target
+# tables per kind. Scoping means the same thing wherever it
 # is attached — "which part of this site" — so a single shape keeps the
 # model, the form and the resolver in one place, and an agent stays scopeable
 # everywhere a swarm is.

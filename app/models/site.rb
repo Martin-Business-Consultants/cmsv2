@@ -7,8 +7,8 @@
 #   Site.key   # => "acme"                   (SITE_KEY, else the host's first label)
 #
 # `key` is what the API has always sent as `tenant` (manifest, webhook
-# envelopes, device login's `account`) and what Lumin matches a site on, so
-# it has to stay the same when an install moves hosts.
+# envelopes, device login's `account`) and what integrations tell sites apart
+# by, so it has to stay the same when an install moves hosts.
 module Site
   module_function
 

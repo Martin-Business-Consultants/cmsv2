@@ -209,8 +209,6 @@ Open questions:
 
 - [ ] Final name: is **LibrePublish** free as a trademark and domain?
 - [ ] Licence: AGPL plus a commercial licence, or MIT for adoption?
-- [ ] Which plugins are open source, and which (the Lumin integration) stay
-      private?
 - [ ] What goes into the public repo: a fresh history, with customer names,
       server addresses and secrets removed.
 - [ ] Who is the first enterprise design partner?

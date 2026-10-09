@@ -87,7 +87,7 @@ elif [ -r /dev/tty ]; then
 else
   die "no terminal to approve in, and no token to fall back on. Either run this
   from a terminal, or pass a token:
-    USER_AGENT_TOKEN=mbc_… sh -c \"\$(curl -fsSL $CMS_URL/agent/install.sh)\""
+    USER_AGENT_TOKEN=lp_… sh -c \"\$(curl -fsSL $CMS_URL/agent/install.sh)\""
 fi
 
 # ── 3. Check ────────────────────────────────────────────────────────────────

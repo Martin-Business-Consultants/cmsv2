@@ -1,7 +1,7 @@
 # Style
 
-How code in this repo is written. The model is 37signals' Fizzy
-(`~/Projects/mbc/fizzy`, its `STYLE.md` and `AGENTS.md`), adapted to a CMS with
+How code in this repo is written. The model is 37signals' Fizzy (its
+`STYLE.md` and `AGENTS.md`), adapted to a CMS with
 a public API, plugins and RSpec. When in doubt, find similar code here and
 copy its shape. Reference implementations:
 
@@ -155,7 +155,7 @@ change.
 - Don't name a partial's local `collection:` (or `as:`): jbuilder reads
   either as "render once per item". The collection partial takes `record:`.
 - `/api` is its own namespace with a frozen contract: the Astro sites, the
-  `cms` CLI, Lumin and agents read it. Before changing anything an endpoint
+  `cms` CLI, integrations and agents read it. Before changing anything an endpoint
   touches, snapshot its responses (status, body, the `X-Agent-Envelope: 1`
   variant, error cases, and the audit rows and jobs a write leaves) under
   frozen time, and diff after. They must come out byte-identical.

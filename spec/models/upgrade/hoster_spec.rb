@@ -69,12 +69,12 @@ RSpec.describe Upgrade::Hoster do
 
   it "fails the update when the deploy is turned down" do
     upgrade.update!(external_id: "change_request:31")
-    hoster(%r{/change_requests/31\z} => ok(change_request: {id: 31, status: "rejected", decided_by: "Ted"}))
+    hoster(%r{/change_requests/31\z} => ok(change_request: {id: 31, status: "rejected", decided_by: "Alice"}))
 
     described_class.new(upgrade).check
 
     expect(upgrade.reload).to be_failed
-    expect(upgrade.message).to eq("The deploy was turned down in Hoster by Ted.")
+    expect(upgrade.message).to eq("The deploy was turned down in Hoster by Alice.")
   end
 
   it "fails the update when the deployment fails" do

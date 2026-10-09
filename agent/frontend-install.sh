@@ -17,7 +17,7 @@
 #
 # The token is the site's own read-only service token, approved in your
 # browser — nobody copies one out of a settings page. For CI, pass one
-# instead: CMS_API_TOKEN=mbc_… sh -c "$(curl -fsSL __CMS_URL__/frontend/install.sh)"
+# instead: CMS_API_TOKEN=lps_… sh -c "$(curl -fsSL __CMS_URL__/frontend/install.sh)"
 #
 # Then `npx astro dev` writes AGENTS.md (how this site works with the CMS,
 # and the Site health checks it's held to). Re-running is safe: it updates
@@ -110,7 +110,7 @@ elif [ -r /dev/tty ]; then
   say "  ✓ approved: the site has a read-only service token of its own"
 else
   die "no terminal to approve in, and no token. Pass one:
-    CMS_API_TOKEN=mbc_… sh -c \"\$(curl -fsSL $CMS_URL/frontend/install.sh)\""
+    CMS_API_TOKEN=lps_… sh -c \"\$(curl -fsSL $CMS_URL/frontend/install.sh)\""
 fi
 
 # The delivery API the site reads (/api/v1), to check the token works.

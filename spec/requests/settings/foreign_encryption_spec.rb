@@ -22,7 +22,7 @@ RSpec.describe "Values encrypted with another install's key", type: :request do
 
   it "shows the API token page, and says a token it can't read must be rotated to be shown" do
     token = ApiToken.for(admin)
-    write_raw(ApiToken, :token, foreign("mbc_old"), token.id)
+    write_raw(ApiToken, :token, foreign("lp_old"), token.id)
 
     get settings_api_token_path
     expect(response).to have_http_status(:ok)
@@ -34,19 +34,19 @@ RSpec.describe "Values encrypted with another install's key", type: :request do
 
   it "rotates a token it can't read, so it can be shown again" do
     token = ApiToken.for(admin)
-    write_raw(ApiToken, :token, foreign("mbc_old"), token.id)
+    write_raw(ApiToken, :token, foreign("lp_old"), token.id)
 
     post settings_api_token_rotation_path
 
     expect(token.reload.visible?).to be(true)
-    expect(ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin).tap { write_raw(ServiceToken, :token, foreign("mbcs_old"), it.id) }
+    expect(ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin).tap { write_raw(ServiceToken, :token, foreign("lps_old"), it.id) }
       .reload.rotate!).to start_with(ServiceToken::PREFIX)
   end
 
   # cms login (the agent installer): the CLI waits, someone approves, and the
   # next poll hands over the person's token, rotating one that can't be read.
   it "lets the CLI log in as someone whose token it can't read" do
-    write_raw(ApiToken, :token, foreign("mbc_old"), ApiToken.for(admin).id)
+    write_raw(ApiToken, :token, foreign("lp_old"), ApiToken.for(admin).id)
     post "/api/device/code", params: {hostname: "laptop"}
     device_code = JSON.parse(response.body)["device_code"]
 
@@ -84,7 +84,7 @@ RSpec.describe "Values encrypted with another install's key", type: :request do
 
   it "shows the service tokens page with one it can't read" do
     service = ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin)
-    write_raw(ServiceToken, :token, foreign("mbcs_old"), service.id)
+    write_raw(ServiceToken, :token, foreign("lps_old"), service.id)
 
     get settings_service_tokens_path
 

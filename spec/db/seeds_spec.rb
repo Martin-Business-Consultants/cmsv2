@@ -11,6 +11,6 @@ RSpec.describe "db/seeds.rb" do
     expect(User.count).to eq(0)
     expect(Role.find_by(name: "Editor")).to be_present
     expect(BlockType.count).to be_positive
-    expect(Page.where(title: "Kalamazoo Mortgage")).to be_empty
+    expect(Page.where(title: "Acme Home Loans")).to be_empty
   end
 end

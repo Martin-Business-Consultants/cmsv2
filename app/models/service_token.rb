@@ -17,17 +17,18 @@ require "securerandom"
 # Storage mirrors ApiToken deliberately — `token_digest` (SHA-256) is the only
 # column authentication consults, and the encrypted `token` exists so the
 # settings screen can show the secret again instead of forcing a rotation to
-# read it. The `mbcs_` prefix distinguishes one at a glance from a personal
-# `mbc_` token in a log or an env file.
+# read it. The `lps_` prefix distinguishes one at a glance from a personal
+# `lp_` token in a log or an env file. (Tokens issued earlier start
+# `mbcs_` and `mbc_`; they authenticate the same way, by digest.)
 #
 # Revoking sets `revoked_at` rather than deleting: audit rows name the token
 # that acted, and that name should still resolve months later.
 class ServiceToken < ApplicationRecord
   include Eventable
 
-  PREFIX = "mbcs_"
+  PREFIX = "lps_"
   PLAINTEXT_BYTES = 32
-  PREFIX_LENGTH = 13                    # "mbcs_" + 8 chars
+  PREFIX_LENGTH = 12                    # "lps_" + 8 chars
   USE_THROTTLE = 1.minute
 
   encrypts :token

@@ -193,7 +193,7 @@ second one.
 ## Operations
 
 ```sh
-cms audit --actor ted --event page.published
+cms audit --actor alice --event page.published
 cms site-health                 # whether the site is in good order
 cms backup > backup.tar.gz      # full site export before anything risky
 ```

@@ -30,9 +30,9 @@ require "securerandom"
 class ApiToken < ApplicationRecord
   include Eventable
 
-  PREFIX            = "mbc_"
+  PREFIX            = "lp_"
   PLAINTEXT_BYTES   = 32                              # 32 bytes → 43 url-safe chars
-  PREFIX_LENGTH     = 12                              # "mbc_" + 8 chars
+  PREFIX_LENGTH     = 11                              # "lp_" + 8 chars
   USE_THROTTLE      = 1.minute                        # last_used_at not bumped more often than this
 
   # Non-deterministic: nothing ever queries by plaintext (that's the

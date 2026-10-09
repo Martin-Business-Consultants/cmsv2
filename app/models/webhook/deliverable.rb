@@ -49,8 +49,7 @@ module Webhook::Deliverable
 
   private
 
-  # `tenant` keeps its name — receivers (Lumin among them) match on it — and
-  # carries Site.key.
+  # `tenant` keeps its name — receivers match on it — and carries Site.key.
   def envelope(event, payload)
     {
       event:        event,
@@ -71,7 +70,7 @@ module Webhook::Deliverable
 
     request = Net::HTTP::Post.new(uri.request_uri, {
       "Content-Type"    => "application/json",
-      "User-Agent"      => "mbc-cms-webhooks/1",
+      "User-Agent"      => "librepublish-webhooks/1",
       "X-CMS-Signature" => signature_for(body)
     }.merge((headers || {}).to_h.transform_keys(&:to_s)))
     request.body = body

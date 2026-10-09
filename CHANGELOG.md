@@ -172,7 +172,7 @@ out.
 
 ### Fixed
 - **A plugin's stylesheet that hasn't been compiled no longer fails every
-  admin page** (a 500 on Old Mill Brew's /pages, from Special Builder's):
+  admin page** (a 500 on /pages, from a plugin's stylesheet):
   the admin renders without that plugin's styles and reports it, and a
   failure compiling an installed plugin's assets at boot is logged with
   what went wrong.
@@ -258,8 +258,8 @@ out.
 ## 1.4.0
 
 ### Added
-- **A Docker install updates itself from Settings › Updates**, as Runwell
-  and WordPress do, with nothing to set up: Update downloads the release's
+- **A Docker install updates itself from Settings › Updates**, as
+  WordPress does, with nothing to set up: Update downloads the release's
   bundle for this machine (the app, its gems, the default plugins and its
   Ruby, attached to every release from now on) into the data volume, checks
   it, and restarts the container on it (`Upgrade::InPlace`). Deploying a
@@ -310,7 +310,7 @@ out.
 ## 1.2.0
 
 ### Added
-- **Install a plugin from Settings › Plugins**, as Runwell does: an admin
+- **Install a plugin from Settings › Plugins**: an admin
   gives its GitHub repository (`owner/name`) and the CMS installs its latest
   release on the server (`CMS_DATA_DIR/plugins`), where it stays through
   deploys and updates, and restarts. Installed plugins get Update and Remove
@@ -450,8 +450,7 @@ out.
   getting-started checklist; and the Agents, AI, Local Marketing, Consent &
   Scripts and Importers plugins. Site Health stays. A migration drops their
   tables and settings, and takes their capabilities off saved roles. The
-  Lumin contract (`cms_contract.json`, version 2) no longer has the
-  findings endpoint.
+  webhook contract (version 2) no longer has the findings endpoint.
 - **No review queue: anything in front of visitors takes the publish
   capability.** Changing a published page or entry, or any global, and
   publishing or scheduling a draft, need `<resource>:publish`. Without it the
@@ -478,7 +477,7 @@ out.
   architecture specs allowed. Agents, AI, Forms and Importers keep
   their classes, now in `app/models`; the plugins' APIs render jbuilder
   views; Forms' `POST /api/submissions/bulk_destroy` is a resource at the
-  same URL; `Lumin::LlmTool` becomes `Ai::Tool` in the AI plugin, so only AI
+  same URL; the AI plugin's LLM tool becomes `Ai::Tool`, so only AI
   names RubyLLM. The specs now forbid all four patterns outright.
 - **Plugin job names.** `AgentRunJob`, `AgentSchedulerJob`, `ReapAgentRunsJob`,
   `NotifyFormSubmissionJob`, `NotifyQuoteRequestJob`, `SendInvoiceJob`,
@@ -593,7 +592,7 @@ customer per install, rather than a shared multi-tenant service.
   global database, subdomain routing, root-domain signup and provisioning).
   An install is configured by its environment: `APP_HOST`, `SITE_KEY` (sent
   as `tenant` in webhooks, the manifest and device login, unchanged for
-  Lumin) and `CMS_DATA_DIR`, which holds every database and uploaded file.
+  integrations) and `CMS_DATA_DIR`, which holds every database and uploaded file.
 - `bin/install --host …` sets up a plain install; `bin/update [vX.Y.Z]` backs
   up the data directory, checks out a release, migrates and restarts.
   `config/deploy.yml` is one install per Kamal destination
@@ -606,7 +605,7 @@ customer per install, rather than a shared multi-tenant service.
   version is available.
 
 ### Plugins
-- A plugin system modelled on Runwell's: Rails engines in `engines/`
+- A plugin system: Rails engines in `engines/`
   (bundled) and `plugins/` (installed with `bin/rails "plugins:install[url]"`),
   switched on in Settings › Plugins. Extension points: menu links, view
   slots, settings pages, capabilities, stylesheets, nightly tasks, API

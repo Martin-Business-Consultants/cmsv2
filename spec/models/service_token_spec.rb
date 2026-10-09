@@ -10,7 +10,7 @@ RSpec.describe ServiceToken do
     it "mints a readable secret with its own prefix" do
       token = described_class.issue!(name: "Production site", role: site_role)
 
-      expect(token.token).to start_with("mbcs_")
+      expect(token.token).to start_with("lps_")
       expect(token).to be_visible
       expect(token.prefix).to eq(token.token.first(described_class::PREFIX_LENGTH))
     end
@@ -52,7 +52,15 @@ RSpec.describe ServiceToken do
 
     it "is nil for nonsense" do
       expect(described_class.authenticate("")).to be_nil
-      expect(described_class.authenticate("mbcs_nope")).to be_nil
+      expect(described_class.authenticate("lps_nope")).to be_nil
+    end
+
+    it "still accepts a token issued under the earlier mbcs_ prefix" do
+      token = described_class.issue!(name: "PRODUCTION", role: Role.system_admin)
+      legacy = "mbcs_#{SecureRandom.urlsafe_base64(described_class::PLAINTEXT_BYTES)}"
+      token.update!(**described_class.columns_for(legacy))
+
+      expect(described_class.authenticate(legacy)).to eq(token)
     end
   end
 

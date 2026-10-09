@@ -11,7 +11,7 @@ RSpec.describe "Api::DeviceAuthorizations", type: :request do
 
   describe "POST /api/device/code" do
     it "mints a code pair without any credential at all" do
-      post "/api/device/code", params: {hostname: "ted-laptop"}
+      post "/api/device/code", params: {hostname: "alice-laptop"}
 
       expect(response).to have_http_status(:created)
       expect(json["user_code"]).to match(/\A[0-9A-Z]{4}-[0-9A-Z]{4}\z/)
@@ -31,9 +31,9 @@ RSpec.describe "Api::DeviceAuthorizations", type: :request do
     end
 
     it "records the hostname so the approval screen can say what is asking" do
-      post "/api/device/code", params: {hostname: "ted-laptop"}
+      post "/api/device/code", params: {hostname: "alice-laptop"}
 
-      expect(DeviceAuthorization.last.hostname).to eq("ted-laptop")
+      expect(DeviceAuthorization.last.hostname).to eq("alice-laptop")
     end
   end
 
@@ -124,13 +124,13 @@ RSpec.describe "Api::DeviceAuthorizations", type: :request do
     let(:user) { create(:user) }
 
     it "shows the machine that is asking, when the code is pre-filled" do
-      post "/api/device/code", params: {hostname: "ted-laptop"}
+      post "/api/device/code", params: {hostname: "alice-laptop"}
       code = json["user_code"]
 
       sign_in_as user
       get "/connect", params: {code: code}
 
-      expect(response.body).to include("ted-laptop")
+      expect(response.body).to include("alice-laptop")
     end
 
     it "links the approving person's account" do

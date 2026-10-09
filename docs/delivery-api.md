@@ -53,7 +53,7 @@ doesn't serve), `conflict` (409), `invalid` (422), `rate_limited` (429, with
 **`/api` pages differently, on purpose.** The management API's lists keep the
 shape they've always had, `{"<items>": […], "page", "per", "total"}` at the
 top level (references add `total_pages`); `/api/v1` puts paging in `meta`
-with `next_page`. `/api`'s contract is frozen — the CLI, Lumin and agents
+with `next_page`. `/api`'s contract is frozen — the CLI, integrations and agents
 read it — so it won't move to v1's shape; a new client reading lists should
 use `/api/v1`.
 

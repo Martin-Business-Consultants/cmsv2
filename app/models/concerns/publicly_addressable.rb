@@ -4,10 +4,10 @@
 #
 # Three things need to agree on this and used to compute it separately: the
 # sitemap, the delivery API and the content webhooks. They must agree, because
-# the consumer on the other end of the webhook (Lumin) joins Search Console rows
-# to CMS records *by URL* — a webhook that announces a different URL than the
-# sitemap published is a record the analytics side can never match. See
-# ../ads/docs/cms-contract.md.
+# a webhook's receiver matches records *by URL* (search and analytics rows come
+# keyed by address) — a webhook that announces a different URL than the
+# sitemap published is a record the receiver can never match. See
+# docs/webhooks.md.
 #
 # The including class provides `default_public_path`, without a locale; a
 # record in any locale but the site's default (Settings › General) is then

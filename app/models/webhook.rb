@@ -14,9 +14,9 @@ class Webhook < ApplicationRecord
   include Deliverable
   include Eventable
 
-  # If this webhook points at Lumin, its `secret` must be Lumin's own
-  # Site#webhook_secret rather than the one generated here — that is the key the
-  # receiver verifies the signature with. See docs/lumin-integration.md.
+  # A receiver that issues its own signing secret has the webhook carry it in
+  # place of the one generated here — that is the key the receiver verifies
+  # the signature with. See docs/webhooks.md.
   EVENTS = %w[
     page.published
     page.updated

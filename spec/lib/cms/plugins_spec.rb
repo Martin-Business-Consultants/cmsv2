@@ -286,7 +286,7 @@ RSpec.describe Cms::Plugins do
     # A site moved from the old shared deployment, or one whose plugin went:
     # its roles keep capabilities no plugin here declares (quotes:read, from
     # Commerce), which a role's validation refuses, so saving it whole failed
-    # and took the boot down with it (1.5.0, Old Mill Brew).
+    # and took the boot down with it (1.5.0).
     it "gives the defaults to a role holding capabilities of a plugin that isn't here" do
       site.update_column(:permissions, %w[pages:read quotes:read])
 

@@ -23,9 +23,9 @@ RSpec.describe ActiveRecordEncryptionKeys do
   end
 
   it "reads what the other install wrote, which this install's own keys can't" do
-    ciphertext = encrypted_by_old_install("mbc_old")
+    ciphertext = encrypted_by_old_install("lp_old")
 
-    expect(encryptor.decrypt(ciphertext, key_provider: described_class.previous_key_provider(old_secret))).to eq("mbc_old")
+    expect(encryptor.decrypt(ciphertext, key_provider: described_class.previous_key_provider(old_secret))).to eq("lp_old")
     expect { encryptor.decrypt(ciphertext) }.to raise_error(ActiveRecord::Encryption::Errors::Decryption)
     expect { encryptor.decrypt(ciphertext, key_provider: described_class.previous_key_provider("another secret")) }
       .to raise_error(ActiveRecord::Encryption::Errors::Decryption)
@@ -36,7 +36,7 @@ RSpec.describe EncryptedValues do
   it "rewrites what it can read with this install's keys, and counts what it can't" do
     readable = ApiToken.for(create(:user))
     unreadable = ApiToken.for(create(:user))
-    foreign = ActiveRecord::Encryption::Encryptor.new.encrypt("mbc_x", key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new("nobody's"))
+    foreign = ActiveRecord::Encryption::Encryptor.new.encrypt("lp_x", key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new("nobody's"))
     ActiveRecord::Base.connection.execute(ApiToken.sanitize_sql(["UPDATE api_tokens SET token = ? WHERE id = ?", foreign, unreadable.id]))
 
     tally = described_class.reencrypt

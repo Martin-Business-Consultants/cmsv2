@@ -13,7 +13,7 @@ checkout with `bin/install`.
 | Variable | What it is |
 |---|---|
 | `APP_HOST` | The address people and the API use (`acme.librepublish.com`). Links in email, the `cms` CLI and agent bootstraps are built from it. |
-| `SITE_KEY` | What the API calls the site — the `tenant` field of webhook envelopes, `/api/manifest` and device login, which Lumin matches on (`Site#cms_key`). Defaults to the first label of `APP_HOST`. Keep it when a site changes host. |
+| `SITE_KEY` | What the API calls the site — the `tenant` field of webhook envelopes, `/api/manifest` and device login, which integrations match on. Defaults to the first label of `APP_HOST`. Keep it when a site changes host. |
 | `CMS_DATA_DIR` | Databases (`production.sqlite3`, `_cache`, `_queue`, `_cable`), Active Storage files, and `backups/`. Default `storage/` in the app. |
 | `SECRET_KEY_BASE`, `AR_ENCRYPTION_PRIMARY_KEY`, `AR_ENCRYPTION_DETERMINISTIC_KEY`, `AR_ENCRYPTION_KEY_DERIVATION_SALT` | The install's secrets. Losing them loses the sessions and every encrypted value (API tokens, integration keys). Without the `AR_ENCRYPTION_*` keys, encryption keys derive from `SECRET_KEY_BASE`. |
 | `CMS_PREVIOUS_SECRET_KEY_BASE` | Another install's `secret_key_base`, so values it encrypted stay readable here: a site moved from the old shared deployment, or an install whose `SECRET_KEY_BASE` changed. This install still writes with its own keys; `bin/rails cms:reencrypt` rewrites everything with them, after which this can go. |
@@ -314,6 +314,6 @@ Before and after:
   rewrites them all with this install's keys, and the variable can go. (A
   value nothing can read can only be re-entered, or the token rotated.)
 - Set `SITE_KEY` to the old subdomain and keep `<sub>.librepublish.com` as
-  `APP_HOST` (the task prints both), so existing tokens, CLI profiles, Lumin
-  and the Astro site keep working.
+  `APP_HOST` (the task prints both), so existing tokens, CLI profiles,
+  integrations and the Astro site keep working.
 - Drain the old deployment's job queue before switching the hostname over.

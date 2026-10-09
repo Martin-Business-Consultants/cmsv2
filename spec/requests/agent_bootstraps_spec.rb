@@ -87,7 +87,7 @@ RSpec.describe "Agent bootstrap", type: :request do
   it "hands out no secrets — the operator supplies the token" do
     %w[/agent/install.sh /agent/cms /agent/AGENTS.md /agent/SKILL.md].each do |path|
       get path
-      expect(response.body).not_to match(/mbc_[A-Za-z0-9_-]{20,}/)
+      expect(response.body).not_to match(/lps?_[A-Za-z0-9_-]{20,}/)
     end
   end
 end

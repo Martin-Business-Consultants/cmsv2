@@ -63,7 +63,7 @@ module TwoFactor
     (bin % 10 ** CODE_DIGITS).to_s.rjust(CODE_DIGITS, "0")
   end
 
-  def provisioning_uri(secret, account:, issuer: "MBC CMS")
+  def provisioning_uri(secret, account:, issuer: "LibrePublish")
     params = {
       secret:    secret,
       issuer:    issuer,

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# One plugin installed, updated or removed from Settings › Plugins, as
-# Runwell does it. Plugins installed this way live on the server, in
+# One plugin installed, updated or removed from Settings › Plugins.
+# Plugins installed this way live on the server, in
 # CMS_DATA_DIR/plugins (InstalledPlugins), each the latest release of a
 # public GitHub repository. Installing or updating downloads that release,
 # puts it in place and restarts the install (Cms::Restart), which loads it and

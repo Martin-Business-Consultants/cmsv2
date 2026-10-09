@@ -19,8 +19,8 @@ RSpec.describe "Settings layout", type: :request do
     expect(aside).to include('form="settings_form"', "Save changes", 'aria-label="Settings sections"', 'aria-current="page"')
     expect(body).to include('id="settings_form"')
 
-    patch settings_general_path, params: {settings: {title: "Old Mill"}}
-    expect(Setting.get("general")["title"]).to eq("Old Mill")
+    patch settings_general_path, params: {settings: {title: "Acme"}}
+    expect(Setting.get("general")["title"]).to eq("Acme")
   end
 
   it "shows what an API token can do as cards" do

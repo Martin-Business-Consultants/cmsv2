@@ -4,7 +4,7 @@ require "rails_helper"
 
 # A plugin's stylesheet loads only where the plugin shows something
 # (ApplicationHelper#page_plugins), and one production can't find is left
-# out rather than failing the page (Old Mill Brew's /pages, special_builder).
+# out rather than failing the page (it took /pages down in 1.5.x).
 RSpec.describe "Plugins' stylesheets", type: :request do
   before do
     sign_in_as create(:user)

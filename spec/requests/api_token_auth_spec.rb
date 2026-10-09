@@ -107,7 +107,7 @@ RSpec.describe "API token auth", type: :request do
 
       expect(response).to have_http_status(:success)
       fresh = JSON.parse(response.body)["plaintext"]
-      expect(fresh).to start_with("mbc_")
+      expect(fresh).to start_with("lp_")
       expect(fresh).not_to eq(old)
 
       get "/api/pages", headers: auth_headers(old)

@@ -17,7 +17,7 @@ RSpec.describe ApiToken do
       token = described_class.for(user)
 
       expect(token).to be_persisted
-      expect(token.token).to start_with("mbc_")
+      expect(token.token).to start_with("lp_")
       expect(token.prefix).to eq(token.token.first(described_class::PREFIX_LENGTH))
       expect(token.token_digest).to eq(described_class.digest(token.token))
     end
@@ -35,7 +35,7 @@ RSpec.describe ApiToken do
       token = described_class.for(user)
       raw   = described_class.connection.select_value("SELECT token FROM api_tokens WHERE id = #{token.id.to_i}")
 
-      expect(token.reload.token).to start_with("mbc_")
+      expect(token.reload.token).to start_with("lp_")
       expect(raw).to be_present
       expect(raw).not_to include(token.token)
     end
@@ -48,7 +48,15 @@ RSpec.describe ApiToken do
     end
 
     it "returns nil for an unknown plaintext" do
-      expect(described_class.authenticate("mbc_not_a_real_token")).to be_nil
+      expect(described_class.authenticate("lp_not_a_real_token")).to be_nil
+    end
+
+    it "still accepts a token issued under the earlier mbc_ prefix" do
+      token = described_class.for(user)
+      legacy = "mbc_#{SecureRandom.urlsafe_base64(described_class::PLAINTEXT_BYTES)}"
+      token.update!(**described_class.columns_for(legacy))
+
+      expect(described_class.authenticate(legacy)).to eq(token)
     end
 
     it "returns nil for a blank plaintext" do

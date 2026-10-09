@@ -77,8 +77,8 @@ class Api::BaseController < ApplicationController
     return nil unless header.start_with?("Bearer ")
 
     plaintext = header.split(" ", 2).last
-    # Personal token first: it's the older, more common one, and the two
-    # prefixes (mbc_ / mbcs_) never collide anyway.
+    # Personal token first: it's the older, more common one. Both look a
+    # token up by its digest, so its prefix doesn't decide which it is.
     ApiToken.authenticate(plaintext) || ServiceToken.authenticate(plaintext)
   end
 

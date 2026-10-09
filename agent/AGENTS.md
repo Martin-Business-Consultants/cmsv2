@@ -126,7 +126,7 @@ cms redirects all               # every rule, with hit counts
 cms redirect add /old /new 301
 cms submissions                 # form inbox across every form (Forms plugin)
 cms quotes --status new         # quote requests (Commerce plugin)
-cms audit --actor ted           # who changed what
+cms audit --actor alice           # who changed what
 cms webhooks
 cms backup > backup.tar.gz
 ```

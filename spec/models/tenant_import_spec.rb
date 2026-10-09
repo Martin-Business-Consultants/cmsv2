@@ -45,7 +45,7 @@ RSpec.describe TenantImport do
       Role.system_admin
       owner = create(:user, email: "owner@acme.test", admin: false)
       create(:user, email: "editor@acme.test", admin: false)
-      foreign = ActiveRecord::Encryption::Encryptor.new.encrypt("mbc_old", key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new("the old deployment's key"))
+      foreign = ActiveRecord::Encryption::Encryptor.new.encrypt("lp_old", key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new("the old deployment's key"))
       # Written raw: update_columns would encrypt it again with this install's key.
       ActiveRecord::Base.connection.execute(ApiToken.sanitize_sql(["UPDATE api_tokens SET token = ? WHERE user_id = ?", foreign, owner.id]))
 

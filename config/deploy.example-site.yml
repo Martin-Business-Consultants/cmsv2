@@ -16,7 +16,7 @@ servers:
 env:
   clear:
     APP_HOST: example-site.example.com
-    # What the API sends as `tenant`, and what Lumin matches a site on.
+    # What the API and webhooks send as `tenant`, which integrations match on.
     # Defaults to the first label of APP_HOST; keep it if the host changes.
     SITE_KEY: example-site
     # Behind a proxy that terminates TLS (Cloudflare, a load balancer).

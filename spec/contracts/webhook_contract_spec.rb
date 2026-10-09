@@ -3,21 +3,18 @@
 require "rails_helper"
 require "openssl"
 
-# The CMS half of the Lumin seam contract.
+# What a webhook receiver can rely on (spec/fixtures/contracts/
+# webhook_contract.json, docs/webhooks.md): the envelope, its signature, the
+# events, and the keys of a page's or entry's payload. A receiver matches a
+# payload to a record by its URL, so that has to be the address the site
+# publishes.
 #
-# The counterpart lives at ../ads/test/integration/cms_contract_test.rb and both
-# assert against the same committed fixture. That arrangement exists because the
-# seam had already broken in both directions without a single test noticing: the
-# content webhook had never carried the URL its consumer joins on, and Lumin was
-# still POSTing to /ai_proposals long after this app dropped it.
-#
-# If you change a payload shape here, the fixture and the Lumin test change with
-# it — that is the point, not an inconvenience.
-RSpec.describe "Lumin contract", type: :request do
+# If you change a payload shape here, the fixture changes with it, and so
+# does what every receiver sees — that is the point, not an inconvenience.
+RSpec.describe "Webhook contract", type: :request do
   CONTRACT = JSON.parse(
-    File.read(Rails.root.join("spec/fixtures/contracts/cms_contract.json"))
+    File.read(Rails.root.join("spec/fixtures/contracts/webhook_contract.json"))
   ).freeze
-  SIBLING_ADS = Rails.root.join("..", "ads")
 
   def json = JSON.parse(response.body)
 
@@ -26,18 +23,7 @@ RSpec.describe "Lumin contract", type: :request do
     {"Authorization" => "Bearer #{actor.api_token.token}"}
   end
 
-  # --- The fixture is shared, not ours alone --------------------------------
-
-  it "keeps the contract fixture byte-identical to Lumin's copy" do
-    mirror = SIBLING_ADS.join("test/fixtures/files/cms_contract.json")
-    skip "Lumin repo not checked out beside this one" unless File.exist?(mirror)
-
-    expect(File.read(Rails.root.join("spec/fixtures/contracts/cms_contract.json")))
-      .to eq(File.read(mirror)),
-        "The two copies of the contract have drifted. Edit both, or neither."
-  end
-
-  # --- CMS -> Lumin: what we publish ----------------------------------------
+  # --- What the CMS sends ---------------------------------------------------
 
   describe "content webhook payloads" do
     let(:page) {
@@ -61,9 +47,8 @@ RSpec.describe "Lumin contract", type: :request do
         .to eq(CONTRACT.dig("webhook", "entry_data_keys").sort)
     end
 
-    # The reason the whole contract exists: Lumin joins Search Console rows to
-    # CMS records by URL. A payload without one describes a page it can never
-    # identify, which is what it did for the life of this webhook.
+    # A receiver matches a payload to the page it describes by URL (rows from
+    # search or analytics come keyed by address), so every payload carries one.
     it "carries an absolute url" do
       expect(page.webhook_payload[:url]).to eq("https://acme.test/about")
     end
@@ -104,7 +89,7 @@ RSpec.describe "Lumin contract", type: :request do
 
   describe "the delivery envelope" do
     let(:webhook) {
-      Webhook.create!(name: "lumin", url: "https://acme.golumin.test/webhooks/content",
+      Webhook.create!(name: "receiver", url: "https://hooks.acme.test/content",
         events: ["page.published"], secret: "site-webhook-secret")
     }
 

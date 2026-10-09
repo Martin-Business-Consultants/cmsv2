@@ -6,7 +6,7 @@
 # capabilities it may use, and a cadence. A local harness (installed by
 # `agent/install.sh`) claims a run, executes the instructions with the `cms`
 # CLI and the API, and reports back. So there are no built-in agent classes
-# the way Lumin/ads has them — the starter set lives in
+# — the starter set lives in
 # `Agents::TemplateLibrary` and instantiates into an editable row, which
 # gives the same "pick one, tune it" flow without a second code path.
 #

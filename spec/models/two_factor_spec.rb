@@ -49,10 +49,10 @@ RSpec.describe TwoFactor do
 
   describe ".provisioning_uri" do
     it "is a valid otpauth URI" do
-      uri = described_class.provisioning_uri("ABC", account: "alice@example.com", issuer: "MBC CMS")
+      uri = described_class.provisioning_uri("ABC", account: "alice@example.com", issuer: "LibrePublish")
       expect(uri).to start_with("otpauth://totp/")
       expect(uri).to include("secret=ABC")
-      expect(uri).to include("issuer=MBC%20CMS")
+      expect(uri).to include("issuer=LibrePublish")
     end
   end
 end

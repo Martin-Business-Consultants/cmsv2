@@ -4,7 +4,7 @@
 #
 # The server never runs the model. It queues a run, hands out a frozen brief
 # when a worker claims it, and records what came back. That inverts the
-# staleness rule Lumin/ads learned the hard way: a `queued` run with no
+# usual staleness rule: a `queued` run with no
 # worker is WAITING, not stale, so only a *claimed* run whose lease expired
 # gets requeued. Solid Queue is up whenever the app is; a worker box is not.
 #

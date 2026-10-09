@@ -55,11 +55,12 @@ ROLES = [
 ].freeze
 
 
-# Home page composed of sections inspired by kalamazoomortgage.com.
+# Home page for a fictional local lender, composed of sections a real one
+# might use.
 HOME_BLOCKS = [
   # 1. Hero
   {"type" => "hero", "version" => 1, "data" => {
-    "heading"    => "Veteran-Owned. Community-Focused. Built Around You.",
+    "heading"    => "Local Lending, Built Around You.",
     "subheading" => "Real mortgage solutions for every chapter of your life — from first-time buyers to seasoned investors. Local lenders who actually pick up the phone.",
     "ctas" => [
       {"label" => "Start Your Home Loan Journey",
@@ -107,7 +108,7 @@ HOME_BLOCKS = [
   # 4. Personalized financing + stats
   {"type" => "stats_section", "version" => 1, "data" => {
     "heading" => "Personalized financing that fits your life",
-    "body"    => "At Kalamazoo Mortgage, we don't believe in one-size-fits-all lending. Every borrower's situation is unique, and we tailor our solutions accordingly.",
+    "body"    => "At Acme Home Loans, we don't believe in one-size-fits-all lending. Every borrower's situation is unique, and we tailor our solutions accordingly.",
     "stats"   => [
       {"value" => "98%",     "label" => "Client satisfaction"},
       {"value" => "8,000+",  "label" => "Mortgages closed"},
@@ -132,14 +133,14 @@ HOME_BLOCKS = [
   {"type" => "heading", "version" => 1, "data" => {"level" => "2", "text" => "Our Partners"}},
 
   {"type" => "text", "version" => 1, "data" => {
-    "body" => "At Kalamazoo Mortgage, we believe in a collaborative approach. We work hand-in-hand with realtors, builders, and trusted local service providers to make every closing smooth."
+    "body" => "At Acme Home Loans, we believe in a collaborative approach. We work hand-in-hand with realtors, builders, and trusted local service providers to make every closing smooth."
   }},
 
   # 8. Partners (selected from the partners collection)
   {"type" => "partners_grid", "version" => 1, "data" => {
     "heading"  => "Featured partners",
     "body"     => "We work hand-in-hand with these realtors, builders, and service providers to make every closing smooth.",
-    "partners" => %w[allen-edwin-homes berkshire-hathaway-jane-doe west-mi-title]
+    "partners" => %w[maple-ridge-homes jane-doe-realty riverton-title]
   }},
 
   # 9. Other partners grid
@@ -147,9 +148,9 @@ HOME_BLOCKS = [
     "heading" => "Trusted local partners",
     "columns" => "3",
     "cards"   => [
-      {"title" => "West MI Title Company", "subtitle" => "Title & escrow",
+      {"title" => "Riverton Title Company", "subtitle" => "Title & escrow",
        "description" => "Closing services for every transaction we write.",
-       "link_url" => {"kind" => "entry", "collection" => "partners", "value" => "west-mi-title"},
+       "link_url" => {"kind" => "entry", "collection" => "partners", "value" => "riverton-title"},
        "link_label" => "Read More"},
       {"title" => "Heritage Inspections", "subtitle" => "Home inspection",
        "description" => "Detailed pre-purchase home inspections.",
@@ -160,7 +161,7 @@ HOME_BLOCKS = [
        "link_url" => {"kind" => "url", "value" => "/partners/blueriver-insurance"},
        "link_label" => "Read More"},
       {"title" => "Apex Appraisal Group", "subtitle" => "Property appraisal",
-       "description" => "Fast, accurate appraisals throughout SW Michigan.",
+       "description" => "Fast, accurate appraisals across the region.",
        "link_url" => {"kind" => "url", "value" => "/partners/apex-appraisal"},
        "link_label" => "Read More"}
     ]
@@ -193,7 +194,7 @@ HOME_BLOCKS = [
     "testimonials" => [
       {"rating" => 5, "quote" => "From the very first call they treated us like family. Best closing experience I've ever had.",
        "attribution" => "K. Morrison"},
-      {"rating" => 5, "quote" => "I was turned down twice elsewhere. Kalamazoo Mortgage made it happen in two weeks.",
+      {"rating" => 5, "quote" => "I was turned down twice elsewhere. Acme Home Loans made it happen in two weeks.",
        "attribution" => "J. Alvarez"},
       {"rating" => 5, "quote" => "Honest, patient, and they explain every line of the paperwork. Couldn't ask for more.",
        "attribution" => "T. Williams"},
@@ -239,8 +240,8 @@ ActiveRecord::Base.transaction do
 
   # Bring the site up to "fresh install" state — block types, empty
   # globals/setting, and a draft home page. Everything below this layers
-  # Kalamazoo-specific demo content on top.
-  SiteBootstrap.bootstrap!(site_name: "Kalamazoo Mortgage")
+  # the demo lender's content on top.
+  SiteBootstrap.bootstrap!(site_name: "Acme Home Loans")
 
   posts = Collection.find_or_initialize_by(slug: "posts")
   posts.assign_attributes(
@@ -256,7 +257,7 @@ ActiveRecord::Base.transaction do
   posts.save!
 
   # Partners collection: lender-facing profiles (realtors, builders, vendors).
-  # Modeled after kalamazoomortgage.com/partners/<slug>.
+  # One page per partner, at /partners/<slug>.
   partners = Collection.find_or_initialize_by(slug: "partners")
   partners.assign_attributes(
     name: "Partners",
@@ -285,66 +286,64 @@ ActiveRecord::Base.transaction do
 
   PARTNER_ENTRIES = [
     {
-      slug: "allen-edwin-homes", title: "Allen Edwin Homes",
+      slug: "maple-ridge-homes", title: "Maple Ridge Homes",
       frontmatter: {
-        "contact_name" => "Jim Douglass",
+        "contact_name" => "Sam Rivera",
         "role" => "Sales Counselor",
-        "phone" => "(269) 330-5916",
-        "email" => "jdouglass@allenedwin.com",
-        "website" => "https://www.allenedwin.com/",
+        "phone" => "(555) 010-0101",
+        "email" => "sam.rivera@mapleridge.example",
+        "website" => "https://mapleridge.example/",
         "testimonial" => "Clarity, consistency, and completion.",
         "years_experience" => "Over 30 years",
         "markets_served" => [
-          {"value" => "Michigan"}, {"value" => "Indiana"}, {"value" => "Ohio"}
+          {"value" => "Riverton"}, {"value" => "Northfield"}, {"value" => "Lakeview"}
         ],
         "industry_recognition" => [
-          {"value" => "Top 100 Builder in the Nation — Builder Magazine"}
+          {"value" => "Builder of the Year — Example Builders Guild"}
         ]
       },
       body_markdown: <<~MD
-        Allen Edwin Homes is one of the largest privately-held home builders
-        in Michigan, with over 30 years of experience building energy-efficient
-        new construction homes. The company maintains an A+ BBB rating and a
-        90%+ customer recommendation rate.
+        Maple Ridge Homes has built energy-efficient new homes across the
+        region for over 30 years, and most of its buyers finance with us.
       MD
     },
     {
-      slug: "berkshire-hathaway-jane-doe", title: "Berkshire Hathaway HomeServices",
+      slug: "jane-doe-realty", title: "Jane Doe Realty",
       frontmatter: {
         "contact_name" => "Jane Doe",
         "role" => "Realtor — First-Time Buyers",
-        "phone" => "(269) 555-0142",
-        "email" => "jane.doe@berkshirehs.example",
-        "website" => "https://example.com/jane-doe",
+        "phone" => "(555) 010-0142",
+        "email" => "jane@janedoerealty.example",
+        "website" => "https://janedoerealty.example/",
         "testimonial" => "I love handing first-time buyers their keys.",
         "years_experience" => "12 years",
         "markets_served" => [
-          {"value" => "Kalamazoo"}, {"value" => "Portage"}, {"value" => "Mattawan"}
+          {"value" => "Riverton"}, {"value" => "Northfield"}
         ]
       },
       body_markdown: <<~MD
-        Jane has been helping first-time buyers in the greater Kalamazoo
-        area for over a decade. She specializes in patient, education-first
+        Jane has been helping first-time buyers in the Riverton area for
+        over a decade. She specializes in patient, education-first
         home tours and works closely with our loan officers to make sure
         her clients close on time.
       MD
     },
     {
-      slug: "west-mi-title", title: "West MI Title Company",
+      slug: "riverton-title", title: "Riverton Title Company",
       frontmatter: {
         "contact_name" => "Daniel Walters",
         "role" => "Title & Escrow Officer",
-        "phone" => "(269) 555-0188",
-        "email" => "dan.walters@westmititle.example",
-        "website" => "https://example.com/west-mi-title",
+        "phone" => "(555) 010-0188",
+        "email" => "dan.walters@rivertontitle.example",
+        "website" => "https://rivertontitle.example/",
         "testimonial" => "Closings should be the easy part.",
         "years_experience" => "18 years",
         "markets_served" => [
-          {"value" => "Southwest Michigan"}
+          {"value" => "Riverton"}, {"value" => "Lakeview"}
         ]
       },
       body_markdown: <<~MD
-        West MI Title Company handles closings for the bulk of our
+        Riverton Title Company handles closings for the bulk of our
         transactions. They're known for fast turnaround on title work
         and clear communication with buyers, sellers, and lenders alike.
       MD
@@ -478,7 +477,7 @@ ActiveRecord::Base.transaction do
     entry.save!
   }
 
-  # ---- Globals: layer Kalamazoo-specific demo data on the bootstrap shells.
+  # ---- Globals: layer the demo lender's data on the bootstrap shells.
   # The schemas already exist (created by SiteBootstrap); here we
   # force-replace the `data` blob with industry-flavored examples so the
   # local-dev workspace renders a realistic site. This is intentionally
@@ -511,8 +510,8 @@ ActiveRecord::Base.transaction do
           {"label" => "Terms",   "link" => {"kind" => "url", "value" => "/terms"}}
         ]}
       ],
-      "copyright" => "© 2026 Kalamazoo Mortgage. NMLS #130562.",
-      "address"   => "123 Main St, Kalamazoo, MI 49001"
+      "copyright" => "© 2026 Acme Home Loans.",
+      "address"   => "123 Main St, Riverton"
     }
   }.freeze
 
@@ -523,8 +522,8 @@ ActiveRecord::Base.transaction do
   # General Setting: bootstrap created it with the site title; layer on the
   # demo description.
   Setting.set("general", {
-    "title"          => "Kalamazoo Mortgage",
-    "description"    => "Veteran-owned, community-focused mortgage solutions for every chapter of your life.",
+    "title"          => "Acme Home Loans",
+    "description"    => "Community-focused mortgage solutions for every chapter of your life.",
     "default_locale" => "en"
   })
 

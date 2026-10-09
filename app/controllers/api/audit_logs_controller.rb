@@ -4,7 +4,7 @@
 # screen — an agent asked "what changed on this site yesterday, and who did
 # it?" should be able to answer without a browser.
 #
-#   GET /api/audit_log?action=page.published&actor=ted&from=2026-08-01&target_type=Page
+#   GET /api/audit_log?action=page.published&actor=alice&from=2026-08-01&target_type=Page
 class Api::AuditLogsController < Api::BaseController
   enforce_authorization
   requires_capability "audit_log:read", only: [:index]
