@@ -8,6 +8,15 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **Email logos and admin links point at the CMS.** Form emails and
+  collection event emails built the Branding logo's URL, and the "open in
+  the editor" link, on Settings › General's site URL: the public website,
+  which serves neither the CMS's files nor its admin, so the logo never
+  showed and the link was a 404. Both are built on the CMS's own address
+  (`APP_HOST`) now. An install whose `APP_HOST` isn't its public address
+  should set it. Forms is pinned at the commit with its half of the fix.
+
 ## 1.6.0
 
 ### Security
