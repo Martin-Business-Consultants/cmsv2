@@ -426,6 +426,12 @@ module Cms
 
         enabled_manifests.reject { set_up?(it.key) }.to_h do |manifest|
           [manifest.key, set_up!(manifest, only_untouched_roles: true)]
+        rescue => error
+          # It runs as the install boots (after db:prepare): a plugin whose
+          # setup fails is logged and tried again next time, never a site
+          # that won't start.
+          Rails.logger.error("[plugins] #{manifest.key}'s setup failed, to be tried again: #{error.class}: #{error.message}")
+          [manifest.key, nil]
         end.compact_blank
       end
 
@@ -461,9 +467,19 @@ module Cms
           missing = defaults.fetch(role_key, []) - Array(role.permissions)
           next if missing.empty? || role.admin?
 
-          role.update!(permissions: Array(role.permissions) + missing)
+          add_permissions(role, missing)
           granted[name] = missing
         end
+      end
+
+      # Adds capabilities to a built-in role. Saved without the role's
+      # validation, which refuses any capability no plugin here declares: a
+      # role keeps those of a plugin that's gone (Commerce's quotes:read on a
+      # site moved from the old shared deployment), and they'd fail a grant
+      # that has nothing to do with them.
+      def add_permissions(role, capabilities)
+        role.permissions = Array(role.permissions) + capabilities
+        role.save!(validate: false)
       end
 
       # grant_default_permissions for a plugin whose history here is unknown:
@@ -476,7 +492,7 @@ module Cms
           wanted = defaults.fetch(role_key, [])
           next if wanted.empty? || role.admin? || Array(role.permissions).intersect?(own)
 
-          role.update!(permissions: Array(role.permissions) + wanted)
+          add_permissions(role, wanted)
           granted[name] = wanted
         end
       end

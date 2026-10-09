@@ -95,6 +95,16 @@ RSpec.describe Upgrade::InPlace do
     expect(Cms::Restart).not_to have_received(:container_later)
   end
 
+  it "fails the update with why, when the release didn't start and the install went back to its image" do
+    releases.mkpath
+    releases.join("v99.0.0.failed").write("NoMethodError: it broke\n")
+
+    described_class.new(upgrade).check
+
+    expect(upgrade.reload).to be_failed
+    expect(upgrade.message).to include("v99.0.0 didn't start", "went back to #{Cms::VERSION}", "NoMethodError: it broke")
+  end
+
   it "won't leave behind a plugin the image carries that the bundle doesn't" do
     allow(Rails.root).to receive(:glob).and_call_original
     allow(Rails.root).to receive(:glob).with("plugins/*/*.gemspec").and_return([Pathname("/rails/plugins/cms-seo/seo.gemspec")])

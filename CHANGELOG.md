@@ -9,6 +9,16 @@ out.
 ## Unreleased
 
 ### Fixed
+- **1.5.0 wouldn't start on a site whose roles hold a plugin's capabilities
+  that plugin isn't here for** (Commerce's `quotes:read` on a site moved
+  from the old shared deployment): setting up Forms and Media as it booted
+  saved those roles whole, their validation refused the stranger, and the
+  container stopped. Granting a plugin's defaults now leaves a role's other
+  capabilities be, and a plugin whose setup fails is logged and tried again
+  at the next boot rather than stopping it.
+- **A release an install updated itself to that won't start sends it back
+  to its image** (`bin/docker-entrypoint`) instead of a container that never
+  comes up, and Settings › Updates says the update failed, with why.
 - **A backup leaves out what can be fetched again**: the releases an install
   updated itself to (`releases/`) and the archives a site was imported from
   (`site_imports/`). The backup a container takes as it boots with

@@ -51,8 +51,14 @@ class Upgrade::InPlace
     FileUtils.rm_rf(@scratch) if @scratch
   end
 
-  # The job reports its own failure; a restart that never comes back is the timeout's.
+  # The job reports its own failure. A release that wouldn't start sent the
+  # install back to its image (bin/docker-entrypoint), leaving why in
+  # releases/<tag>.failed; a restart that never comes back is the timeout's.
   def check
+    failed = self.class.releases.join("#{tag}.failed")
+    return unless failed.file?
+
+    @upgrade.fail_with("#{tag} didn't start, so this install went back to #{Cms::VERSION}:\n#{failed.read.lines.last(20).join}")
   end
 
   def timing_out_since = @upgrade.created_at
@@ -105,6 +111,7 @@ class Upgrade::InPlace
   def download_to(name, path) = Pathname(github.download(asset_url(name), path))
 
   def unpack(archive)
+    FileUtils.rm_f(self.class.releases.join("#{tag}.failed")) # trying it again
     partial = self.class.releases.join(".#{tag}.partial")
     FileUtils.rm_rf(partial)
     FileUtils.mkdir_p(partial)

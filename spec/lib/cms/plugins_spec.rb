@@ -283,6 +283,33 @@ RSpec.describe Cms::Plugins do
       expect(site.reload.permissions).to eq(%w[pages:read])
     end
 
+    # A site moved from the old shared deployment, or one whose plugin went:
+    # its roles keep capabilities no plugin here declares (quotes:read, from
+    # Commerce), which a role's validation refuses, so saving it whole failed
+    # and took the boot down with it (1.5.0, Old Mill Brew).
+    it "gives the defaults to a role holding capabilities of a plugin that isn't here" do
+      site.update_column(:permissions, %w[pages:read quotes:read])
+
+      settled = described_class.settle!
+
+      expect(settled[:gamma]).to eq("Production site" => %w[gamma:read gamma:templates])
+      expect(site.reload.permissions).to eq(%w[pages:read quotes:read gamma:read gamma:templates])
+    end
+
+    it "logs a plugin whose setup fails, sets up the rest, and tries it again next time" do
+      register :delta, enabled_by_default: true
+      described_class.bootstrap :delta, -> { raise "the plugin's own setup broke" }
+      allow(Rails.logger).to receive(:error)
+
+      settled = described_class.settle!
+
+      expect(settled.keys).to include(:gamma)
+      expect(described_class.set_up?(:delta)).to be(false)
+      expect(Rails.logger).to have_received(:error).with(a_string_matching(/delta.*the plugin's own setup broke/))
+    ensure
+      forget_plugin(:delta)
+    end
+
     it "leaves a role that already holds some of the plugin's capabilities as someone set it" do
       described_class.settle!
 
