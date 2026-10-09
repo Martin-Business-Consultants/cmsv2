@@ -46,14 +46,30 @@ module ContentEditing
 
   # Saves the record, or adds an error and doesn't when the write needs the
   # publish capability the user hasn't got. Whether it saved.
+  #
+  # The edit form posts the lock_version it was rendered with, so a save over
+  # a change someone else made since is refused, with the form kept as typed.
   def save_content(record, attributes = nil, prefix:)
     record.assign_attributes(attributes) if attributes
+    lock_version = posted_lock_version(record)
+    record.lock_version = lock_version if lock_version
     if record.publishing_write? && !can_publish_content?(prefix)
       record.errors.add(:base, "Changing live content, or publishing, needs the publish permission")
       false
     else
       record.save
     end
+  rescue ActiveRecord::StaleObjectError
+    record.errors.add(:base, "Someone else saved this while you were editing, so your changes weren't saved. " \
+      "Copy anything you want to keep, then reload the page to see theirs.")
+    false
+  end
+
+  # The forms post under `page`, `entry` and `global`.
+  def posted_lock_version(record)
+    scope = record.is_a?(CollectionEntry) ? :entry : record.model_name.param_key
+    value = params.dig(scope, :lock_version).to_s
+    value.to_i if value.match?(/\A\d+\z/)
   end
 
   def can_publish_content?(prefix)

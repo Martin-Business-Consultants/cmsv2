@@ -7,6 +7,7 @@
 <% trash = page.persisted? && Current.user.can?("pages:delete") %>
 <%= form_with model: page, url: (page.persisted? ? page_path(page.path) : pages_path), scope: :page, id: "page_form",
       class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form slug", action: "keydown.esc->form#cancel", slug_locked_value: page.persisted? } do |form| %>
+  <%= form.hidden_field :lock_version %>
   <div class="flex min-w-0 flex-1 flex-col gap-6">
     <div>
       <label class="sr-only" for="page_title">Title</label>

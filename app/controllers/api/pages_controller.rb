@@ -5,6 +5,7 @@
 class Api::PagesController < Api::BaseController
   include Api::PublishCapability
   include Api::HeldWrites
+  include Api::LockVersioned
 
   enforce_authorization
   requires_capability "pages:read",   only: [:index, :show]
@@ -12,6 +13,7 @@ class Api::PagesController < Api::BaseController
   requires_capability "pages:delete", only: :destroy
 
   before_action :set_page, only: [:show, :update, :destroy]
+  advertises_lock_version :@page
 
   # What an agent should do next, when it asks for the envelope. These are the
   # exact commands — a suggestion it has to translate is a suggestion it gets
@@ -79,6 +81,7 @@ class Api::PagesController < Api::BaseController
     return if hold_write(:update, @page, page_params, prefix: "pages")
 
     require_publish_capability!(@page, prefix: "pages")
+    expect_lock_version(@page, :page)
     @page.save!
     @page.track_update(from: prior_status)
     render :show

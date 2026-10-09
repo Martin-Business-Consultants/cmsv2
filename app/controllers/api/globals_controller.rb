@@ -7,6 +7,7 @@
 class Api::GlobalsController < Api::BaseController
   include Api::PublishCapability
   include Api::HeldWrites
+  include Api::LockVersioned
 
   enforce_authorization
   requires_capability "globals:read",   only: [:index, :show]
@@ -14,6 +15,7 @@ class Api::GlobalsController < Api::BaseController
   requires_capability "globals:delete", only: :destroy
 
   before_action :set_global, only: [:show, :update, :destroy]
+  advertises_lock_version :@global
 
   def index
     @globals = Global.ordered.to_a
@@ -38,6 +40,7 @@ class Api::GlobalsController < Api::BaseController
     return if hold_write(:update, @global, global_params, prefix: "globals")
 
     require_publish_capability!(@global, prefix: "globals")
+    expect_lock_version(@global, :global)
     @global.save!
     @global.track_update
     render :show

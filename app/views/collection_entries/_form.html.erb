@@ -10,6 +10,7 @@
 <% trash = entry.persisted? && Current.user.can?("entries:delete") %>
 <%= form_with model: entry, url: (entry.persisted? ? collection_entry_path(collection.slug, entry.slug) : collection_entries_path(collection.slug)),
       scope: :entry, id: "entry_form", class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form slug", action: "keydown.esc->form#cancel", slug_locked_value: entry.persisted? } do |form| %>
+  <%= form.hidden_field :lock_version %>
   <div class="flex min-w-0 flex-1 flex-col gap-6">
     <div>
       <label class="sr-only" for="entry_title">Name</label>

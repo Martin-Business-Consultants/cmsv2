@@ -7,6 +7,7 @@ class Api::CollectionEntriesController < Api::BaseController
   include CollectionScoped
   include Api::PublishCapability
   include Api::HeldWrites
+  include Api::LockVersioned
 
   enforce_authorization
   requires_capability "entries:read",   only: [:index, :show]
@@ -14,6 +15,7 @@ class Api::CollectionEntriesController < Api::BaseController
   requires_capability "entries:delete", only: :destroy
 
   before_action :set_entry, only: [:show, :update, :destroy]
+  advertises_lock_version :@entry
 
   agent_breadcrumbs(:index) do
     [crumb("Open one", "cms entry #{params[:collection_id] || "<collection>"} <slug>"),
@@ -60,6 +62,7 @@ class Api::CollectionEntriesController < Api::BaseController
     return if hold_write(:update, @entry, entry_params, prefix: "entries")
 
     require_publish_capability!(@entry, prefix: "entries")
+    expect_lock_version(@entry, :entry)
     @entry.save!
     @entry.track_update(from: prior_status)
     render :show

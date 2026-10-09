@@ -72,6 +72,29 @@ rescued and logged. This is not hypothetical: a summary block that assumed
 working command into a 500. The envelope is decoration on a response that has
 already succeeded, and it is never worth the response.
 
+## Writing over someone else's change
+
+Pages, entries and globals carry a version that goes up with every save. A
+read says which one it got in a header, not the body (the JSON is a frozen
+contract):
+
+```
+GET /api/pages/about                     X-Lock-Version: 4
+```
+
+A write that sends it back is refused if someone saved in between, and
+nothing is changed:
+
+```
+PATCH /api/pages/about {"page": {"title": "…", "lock_version": 4}}
+→ 409 {"error": "conflict", "message": "…", "lock_version": 5}
+```
+
+Read it again and reapply. A write that sends no `lock_version` is applied as
+it always was, so nothing that writes today breaks; anything that edits from
+what it read (an agent rewriting a page's blocks) should send it. The
+admin's forms always do, and say so in the form instead of overwriting.
+
 ## `cms doctor`
 
 The hardest question to ask over an API is "can this machine actually do work?"

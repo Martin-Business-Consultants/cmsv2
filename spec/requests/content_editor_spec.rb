@@ -169,6 +169,8 @@ RSpec.describe "Content editor", type: :request do
       expect(long.reload.blocks.size).to eq(901)
       expect(long.blocks.first["data"]["text"]).to eq("Heading 0, edited")
 
+      # The form as it is after that save, at the page's new version.
+      pairs = pairs.map { |name, value| name == "page[lock_version]" ? [name, long.lock_version.to_s] : [name, value] }
       boundary = "cms-boundary"
       body = pairs.map { |name, value| %(--#{boundary}\r\nContent-Disposition: form-data; name="#{name}"\r\n\r\n#{value}\r\n) }.join + "--#{boundary}--\r\n"
       post page_path(long.path), params: body.sub("Heading 0, edited", "Heading 0, again"),
