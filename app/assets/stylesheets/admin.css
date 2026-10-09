@@ -383,9 +383,14 @@
   }
 }
 
-/* The site's logo at the top of the admin menu, as wide as the menu; folded
-   to icons, its favicon instead (layouts/shared/_admin_menu). */
+/* The site's logo at the top of the admin menu, left-aligned and at most
+   50px tall (scaled down to the menu's width if it's wider); folded to icons,
+   its favicon instead (layouts/shared/_admin_menu). */
 @layer components {
+  .admin-menu__brand-logo {
+    max-height: 50px;
+  }
+
   .admin-menu__brand-favicon {
     display: none;
   }

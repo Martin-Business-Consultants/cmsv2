@@ -10,7 +10,7 @@
 <nav id="admin-menu" class="admin-menu flex flex-col border-r border-gray-200 bg-gray-50 text-sm" aria-label="Admin menu">
   <% if branding[:logo_url_small].present? %>
     <%= link_to dashboard_path, class: "block px-4 pt-4", title: "Dashboard" do %>
-      <%= image_tag branding[:logo_url_small], alt: branding[:site_title].presence || "Home", class: "admin-menu__brand-logo h-auto max-h-20 w-full object-contain" %>
+      <%= image_tag branding[:logo_url_small], alt: branding[:site_title].presence || "Home", class: "admin-menu__brand-logo block h-auto w-auto max-w-full" %>
       <% if branding[:favicon_url].present? %>
         <%= image_tag branding[:favicon_url], alt: "", class: "admin-menu__brand-favicon mx-auto size-8" %>
       <% end %>
