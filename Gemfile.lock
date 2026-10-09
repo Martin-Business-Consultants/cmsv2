@@ -4,18 +4,6 @@ PATH
     hello (0.1.0)
       rails (>= 8.1)
 
-PATH
-  remote: plugins/forms
-  specs:
-    forms (1.0.0)
-      rails (>= 8.1)
-
-PATH
-  remote: plugins/media
-  specs:
-    media (1.0.0)
-      rails (>= 8.1)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -492,7 +480,6 @@ DEPENDENCIES
   csv
   debug
   factory_bot_rails
-  forms!
   fugit
   hello!
   herb (~> 0.11.0)
@@ -502,7 +489,6 @@ DEPENDENCIES
   kamal
   letter_opener
   lexxy (~> 0.9.33)
-  media!
   propshaft
   puma (>= 5.0)
   rails (~> 8.1.3)
