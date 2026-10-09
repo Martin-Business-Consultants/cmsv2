@@ -43,5 +43,8 @@ RSpec.configure do |config|
 
   config.include FactoryBot::Syntax::Methods
   config.include ActiveSupport::Testing::TimeHelpers
+  # A spec that travels in time comes back, whatever included the helpers
+  # (a spec file including them at the top level skips their own teardown).
+  config.after { travel_back }
   config.include AuthenticationHelpers, type: ->(type, _metadata) { [:system, :request, :controller].include?(type) }
 end
