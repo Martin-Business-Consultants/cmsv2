@@ -6,11 +6,11 @@
 <% parents = Page.order(:path).where.not(id: [ page.id, *(page.persisted? ? page.descendants.map(&:id) : []) ].compact) %>
 <% trash = page.persisted? && Current.user.can?("pages:delete") %>
 <%= form_with model: page, url: (page.persisted? ? page_path(page.path) : pages_path), scope: :page, id: "page_form",
-      class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+      class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form slug", action: "keydown.esc->form#cancel", slug_locked_value: page.persisted? } do |form| %>
   <div class="flex min-w-0 flex-1 flex-col gap-6">
     <div>
       <label class="sr-only" for="page_title">Title</label>
-      <%= form.text_field :title, required: true, class: "w-full rounded-none border-0 border-b bg-transparent px-0 pb-3 pt-0 text-3xl font-semibold tracking-tight", placeholder: "Add title", autofocus: page.new_record? %>
+      <%= form.text_field :title, required: true, class: "w-full rounded-none border-0 border-b bg-transparent px-0 pb-3 pt-0 text-3xl font-semibold tracking-tight", placeholder: "Add title", data: { slug_target: "source", action: "slug#fill" }, autofocus: page.new_record? %>
     </div>
 
     <%= tag.div class: "flex flex-col gap-6", data: ({ tab: "edit", tabs_target: "panel" } if page.persisted?) do %>

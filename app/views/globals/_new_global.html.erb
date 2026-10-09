@@ -12,14 +12,14 @@
   <dialog class="<%= ui(:sheet) %>" data-dialog-target="dialog" aria-label="New global" closedby="any">
     <h2 class="text-lg font-semibold text-gray-900">New global</h2>
     <%= render "layouts/shared/errors", record: global %>
-    <%= form_with model: global, url: globals_path, class: "flex flex-col gap-5" do |form| %>
+    <%= form_with model: global, url: globals_path, class: "flex flex-col gap-5", data: { controller: "slug", slug_separator_value: "_" } do |form| %>
       <label class="flex flex-col gap-1.5">
         <span class="<%= ui(:label) %>">Name</span>
-        <%= form.text_field :name, class: "w-full", placeholder: "General", autocomplete: "off" %>
+        <%= form.text_field :name, class: "w-full", placeholder: "General", autocomplete: "off", data: { slug_target: "source", action: "slug#fill" } %>
       </label>
       <label class="flex flex-col gap-1.5">
         <span class="<%= ui(:label) %>">Slug</span>
-        <%= form.text_field :slug, class: "w-full font-mono", placeholder: "general", autocomplete: "off", spellcheck: false %>
+        <%= form.text_field :slug, class: "w-full font-mono", placeholder: "general", autocomplete: "off", spellcheck: false, data: { slug_target: "slug", action: "slug#take" } %>
         <span class="<%= ui(:help) %>">How the site and the API name it. It can’t change later.</span>
       </label>
       <label class="flex flex-col gap-1.5">

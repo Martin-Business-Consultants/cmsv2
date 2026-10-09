@@ -5,7 +5,8 @@
 <% url = record.persisted? ? record.public_url : nil %>
 <label class="flex flex-col gap-1.5">
   <span class="<%= ui(:label) %>">Slug</span>
-  <%= form.text_field :slug, required: required, class: "w-full font-mono", placeholder: "lowercase-with-dashes", autocomplete: "off", spellcheck: false %>
+  <%= form.text_field :slug, required: required, class: "w-full font-mono", placeholder: "lowercase-with-dashes", autocomplete: "off", spellcheck: false,
+        data: { slug_target: "slug", action: "slug#take" } %>
   <span class="<%= ui(:help) %>"><%= hint %></span>
 </label>
 <% if url.present? %>

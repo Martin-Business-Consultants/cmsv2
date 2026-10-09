@@ -8,6 +8,13 @@ out.
 
 ## Unreleased
 
+### Added
+- **Slugs fill in from the title as it's typed** (the slug Stimulus
+  controller): a new page's, entry's, collection's, global's or block
+  type's, as the server would make it (`our-cafe-bar`; `site_settings` for
+  globals and block types). Typing your own takes it over; a saved record's
+  slug never follows its title, since that would move its address.
+
 ## 1.4.0
 
 ### Added

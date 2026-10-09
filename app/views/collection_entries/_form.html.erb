@@ -9,11 +9,11 @@
 <% fm_scope = content_scope("entry")["frontmatter"] %>
 <% trash = entry.persisted? && Current.user.can?("entries:delete") %>
 <%= form_with model: entry, url: (entry.persisted? ? collection_entry_path(collection.slug, entry.slug) : collection_entries_path(collection.slug)),
-      scope: :entry, id: "entry_form", class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+      scope: :entry, id: "entry_form", class: "flex flex-col gap-6 lg:flex-row lg:items-start", data: { controller: "form slug", action: "keydown.esc->form#cancel", slug_locked_value: entry.persisted? } do |form| %>
   <div class="flex min-w-0 flex-1 flex-col gap-6">
     <div>
       <label class="sr-only" for="entry_title">Name</label>
-      <%= form.text_field :title, required: true, class: "w-full rounded-none border-0 border-b bg-transparent px-0 pb-3 pt-0 text-3xl font-semibold tracking-tight", placeholder: "Add title", autofocus: entry.new_record? %>
+      <%= form.text_field :title, required: true, class: "w-full rounded-none border-0 border-b bg-transparent px-0 pb-3 pt-0 text-3xl font-semibold tracking-tight", placeholder: "Add title", data: { slug_target: "source", action: "slug#fill" }, autofocus: entry.new_record? %>
     </div>
 
     <%= tag.div class: "flex flex-col gap-6", data: ({ tab: "edit", tabs_target: "panel" } if entry.persisted?) do %>

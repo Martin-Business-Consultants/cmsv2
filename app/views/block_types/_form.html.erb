@@ -4,17 +4,18 @@
 <%= render "layouts/shared/errors", record: block_type %>
 
 <%= form_with url: (block_type.persisted? ? block_type_path(block_type.slug) : block_types_path), method: (block_type.persisted? ? :patch : :post),
-      id: "block_type_form", class: "flex max-w-5xl flex-col gap-6" do %>
+      id: "block_type_form", class: "flex max-w-5xl flex-col gap-6",
+      data: { controller: "slug", slug_separator_value: "_", slug_locked_value: block_type.persisted? } do %>
   <section class="<%= ui(:panel, "flex flex-col gap-5 p-6") %>">
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <label class="<%= field_classes %>">
         <span class="<%= ui(:label) %>">Label</span>
-        <%= text_field_tag "block_type[label]", block_type.label, id: nil, class: "w-full", placeholder: "Hero", autocomplete: "off" %>
+        <%= text_field_tag "block_type[label]", block_type.label, id: nil, class: "w-full", placeholder: "Hero", autocomplete: "off", data: { slug_target: "source", action: "slug#fill" } %>
       </label>
       <label class="<%= field_classes %>">
         <span class="<%= ui(:label) %>">Slug</span>
         <%= text_field_tag "block_type[slug]", block_type.slug, id: nil, class: "w-full font-mono", placeholder: "hero",
-              autocomplete: "off", spellcheck: false, disabled: block_type.persisted? %>
+              autocomplete: "off", spellcheck: false, disabled: block_type.persisted?, data: { slug_target: "slug", action: "slug#take" } %>
       </label>
       <label class="<%= field_classes %>">
         <span class="<%= ui(:label) %>">Category</span>
