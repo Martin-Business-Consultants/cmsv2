@@ -254,6 +254,57 @@ RSpec.describe Cms::Plugins do
     end
   end
 
+  describe "settling plugins whose setup never ran here" do
+    let(:site) { Role.find_by!(name: "Production site") }
+    let(:editor) { Role.find_by!(name: "Editor") }
+
+    before do
+      register :gamma, enabled_by_default: true
+      described_class.permissions :gamma, "Gamma", %w[gamma:read gamma:templates gamma:write],
+        defaults: {site: %w[gamma:read gamma:templates], editor: %w[gamma:read gamma:write]}
+      Role.find_or_initialize_by(name: "Production site").update!(permissions: %w[pages:read])
+      Role.find_or_initialize_by(name: "Editor").update!(permissions: %w[pages:read gamma:read])
+      Setting.delete_key(described_class::SETUP_KEY)
+      # Whatever else this checkout has installed is set up already.
+      described_class.mark_set_up!(described_class.enabled_manifests.map(&:key) - [:gamma])
+    end
+
+    after { forget_plugin(:gamma) }
+
+    it "gives a plugin that starts on its defaults when it arrived after the roles, once" do
+      settled = described_class.settle!
+
+      expect(settled[:gamma]).to eq("Production site" => %w[gamma:read gamma:templates])
+      expect(site.reload.permissions).to eq(%w[pages:read gamma:read gamma:templates])
+      expect(described_class.set_up?(:gamma)).to be(true)
+
+      site.update!(permissions: %w[pages:read])
+      expect(described_class.settle!).to eq({})
+      expect(site.reload.permissions).to eq(%w[pages:read])
+    end
+
+    it "leaves a role that already holds some of the plugin's capabilities as someone set it" do
+      described_class.settle!
+
+      expect(editor.reload.permissions).to eq(%w[pages:read gamma:read])
+    end
+
+    it "does nothing for a plugin a fresh install set up with the roles" do
+      described_class.mark_set_up!([:gamma])
+
+      expect(described_class.settle!).to eq({})
+      expect(site.reload.permissions).to eq(%w[pages:read])
+    end
+
+    it "does nothing for a plugin that's off" do
+      Setting.set(described_class::SETTING_KEY, {"gamma" => false})
+      Current.plugin_states = nil
+
+      expect(described_class.settle!).to eq({})
+      expect(described_class.set_up?(:gamma)).to be(false)
+    end
+  end
+
   describe "webhook event filters" do
     it "stores, validates and applies an event's criteria the way its plugin says" do
       register :alpha

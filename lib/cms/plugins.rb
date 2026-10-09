@@ -55,6 +55,9 @@ module Cms
     end
 
     SETTING_KEY = "plugins"
+    # Setting "plugin_setups": {key => when} for each plugin whose first-time
+    # setup on this site has run (set_up!), whichever way it got there.
+    SETUP_KEY = "plugin_setups"
 
     # `after: START` (:start): before everything else in the list.
     START = :start
@@ -386,9 +389,51 @@ module Cms
         Current.plugin_states = nil
         return {} unless on && first_time
 
+        set_up!(manifest)
+      end
+
+      # A plugin's first-time setup on this site: its bootstrap task, its block
+      # types, and its defaults for the built-in roles (see
+      # grant_default_permissions) — then remembered, so it runs once.
+      # Returns {role name => [capabilities added]}.
+      def set_up!(manifest, only_untouched_roles: false)
         bootstrap_tasks[manifest.key]&.call
         install_block_type_pack(manifest)
-        grant_default_permissions(manifest)
+        granted = only_untouched_roles ? grant_to_untouched_roles(manifest) : grant_default_permissions(manifest)
+        mark_set_up!([manifest.key])
+        granted
+      end
+
+      def mark_set_up!(keys)
+        Setting.set(SETUP_KEY, keys.map(&:to_s).index_with { Time.current.iso8601 })
+      end
+
+      def set_up?(key) = Setting.get(SETUP_KEY).key?(key.to_s)
+
+      # Catches up the plugins that are on but whose setup never ran here: one
+      # that starts on, installed into a site whose roles were made before it
+      # (an upgrade, `plugins:install`, Settings › Plugins), or one an upgrade
+      # adopted. Without this, the site's Production site token can't read
+      # its forms. Run after every migrate (lib/tasks/plugins.rake); it does
+      # nothing once each enabled plugin is set up.
+      #
+      # It can't know what someone already took away, so a role gets a
+      # plugin's defaults only when it holds none of that plugin's
+      # capabilities — the sign of a role made before the plugin.
+      # Returns {plugin key => {role name => [capabilities added]}}.
+      def settle!
+        return {} unless settleable?
+
+        enabled_manifests.reject { set_up?(it.key) }.to_h do |manifest|
+          [manifest.key, set_up!(manifest, only_untouched_roles: true)]
+        end.compact_blank
+      end
+
+      def settleable?
+        connection = ActiveRecord::Base.connection
+        connection.table_exists?(:settings) && connection.table_exists?(:roles) && Role.exists?
+      rescue ActiveRecord::ActiveRecordError
+        false
       end
 
       # The first time a plugin is switched on, its block types join the
@@ -418,6 +463,21 @@ module Cms
 
           role.update!(permissions: Array(role.permissions) + missing)
           granted[name] = missing
+        end
+      end
+
+      # grant_default_permissions for a plugin whose history here is unknown:
+      # only the built-in roles holding none of its capabilities.
+      def grant_to_untouched_roles(manifest)
+        defaults = permission_defaults[manifest.key]
+        own = permission_groups[manifest.key].values.flatten
+        built_in_roles.each_with_object({}) do |(name, role_key), granted|
+          role = Role.find_by(name: name) or next
+          wanted = defaults.fetch(role_key, [])
+          next if wanted.empty? || role.admin? || Array(role.permissions).intersect?(own)
+
+          role.update!(permissions: Array(role.permissions) + wanted)
+          granted[name] = wanted
         end
       end
 

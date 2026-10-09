@@ -155,7 +155,7 @@ switches on the plugins it `depends_on` that nobody has switched either.
 | `stylesheet key, "key/name"` | A stylesheet from the engine's `app/assets/stylesheets`, on every admin page. |
 | `nightly key, -> { … }` | Work for `PluginsNightlyJob` (1am); a failure is logged and doesn't stop the others. |
 | `minutely key, :name, -> { … }, every: 2` | Work for `PluginsMinutelyJob` (every minute), run on the minutes divisible by `every`; each task is named so one failing doesn't stop another. Keep it to enqueueing a job. |
-| `bootstrap key, -> { … }` | What the plugin sets up on a site: run by `SiteBootstrap` on a fresh install while the plugin is on, and the first time someone switches it on in Settings › Plugins. Must be idempotent. |
+| `bootstrap key, -> { … }` | What the plugin sets up on a site: run by `SiteBootstrap` on a fresh install while the plugin is on, the first time someone switches it on in Settings › Plugins, or by `plugins:settle` for a plugin that's on but was never set up (see below). Must be idempotent. |
 | `api key, "/api/key/things", description:` | Lists an endpoint with the plugin in `/api/manifest` (`plugins`), where the CLI and agents find it. |
 | `block_types key, [block type hashes], package: "@org/blocks"` | A block type pack, with the npm package holding its Astro components. |
 | `field_type key, "type", validator: ->(value) { errors }, partial: "…"` | A field type for collection and page schemas. |
@@ -177,9 +177,18 @@ yet offer them anywhere.
 The first time someone switches a plugin on in Settings › Plugins, the
 built-in roles (Editor, Author, Production site, Agent) get the capabilities
 its `defaults:` names that they don't hold yet, and the audit log records
-`plugin.permissions_granted`. It never revokes, and it doesn't happen for a
-plugin that starts on, one an upgrade adopted, or on a later switch-on — so a
-capability someone took away stays away.
+`plugin.permissions_granted`. It never revokes, and it doesn't happen on a
+later switch-on — so a capability someone took away stays away.
+
+A plugin that starts on (Forms, Media) is set up with the roles on a fresh
+install. One that arrives later — installed into a running site with
+`plugins:install`, Settings › Plugins or `CMS_PLUGINS`, or adopted by an
+upgrade — is set up by `bin/rails plugins:settle`, which runs after every
+`db:migrate` and `db:prepare` (every way in ends with one): its bootstrap task,
+its block types, and its `defaults:` for each built-in role that holds none of
+its capabilities yet. Each plugin's setup runs once (Setting
+`plugin_setups`), so the site's Production site token can read the forms a
+plugin installed after it was issued.
 
 `after:` puts an addition straight after the item it names (a menu item's id or a submenu label, a
 permission group, a trash kind, a manifest key, a webhook event),

@@ -174,6 +174,8 @@ module SiteBootstrap
   # A plugin switched on later runs its own the first time it is.
   def self.install_plugins!
     Cms::Plugins.enabled_bootstrap_tasks.each_value(&:call)
+    # The roles above were made with these plugins' defaults: they're set up.
+    Cms::Plugins.mark_set_up!(Cms::Plugins.enabled_manifests.map(&:key))
   end
 
   def self.install_general_setting!(site_name:)

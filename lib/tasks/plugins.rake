@@ -5,6 +5,13 @@
 # there, bundles, migrates and asks Puma to restart. Bundled plugins
 # (engines/) ship with the core and are never touched here. docs/plugins.md.
 namespace :plugins do
+  desc "Run the first-time setup of every plugin that's on but was never set up here (role defaults, block types)"
+  task settle: :environment do
+    Cms::Plugins.settle!.each do |key, granted|
+      granted.each { |role, capabilities| puts "#{key}: #{role} gets #{capabilities.join(", ")}" }
+    end
+  end
+
   desc "List every plugin: bundled and installed, version, on or off"
   task list: :environment do
     Cms::Plugins.manifests.values.sort_by(&:name).each do |plugin|
@@ -106,4 +113,12 @@ namespace :plugins do
     end
     FileUtils.touch Rails.root.join("tmp/restart.txt")
   end
+end
+
+# A plugin reaches a site in several ways — bin/setup, `plugins:install`,
+# Settings › Plugins, a Docker image built with CMS_PLUGINS — and every one
+# migrates (or prepares) after it, in a process that has the plugin loaded.
+# So set up whatever is on but never was, there.
+%w[db:migrate db:prepare].each do |name|
+  Rake::Task[name].enhance { Rake::Task["plugins:settle"].invoke } if Rake::Task.task_defined?(name)
 end
