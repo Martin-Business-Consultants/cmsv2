@@ -23,9 +23,10 @@ module Redirect::Portable
     end
 
     # Upserts by source path, so re-running an import is a no-op rather than a
-    # pile of duplicates. Raises CSV::MalformedCSVError on unparseable input.
-    def import_csv(text)
-      Redirect::Import.new(text).tap(&:run)
+    # pile of duplicates. Takes the CSV as a string or an IO, read a row at a
+    # time. Raises CSV::MalformedCSVError on unparseable input.
+    def import_csv(source)
+      Redirect::Import.new(source).tap(&:run)
     end
   end
 

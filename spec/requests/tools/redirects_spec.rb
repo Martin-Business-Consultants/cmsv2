@@ -171,6 +171,16 @@ RSpec.describe "Tools › Redirects", type: :request do
       expect(flash[:notice]).to eq("Import: 1 created, 0 updated, 1 errored — row 3: Source path wildcard `*` is only allowed as a trailing `/*`")
     end
 
+    it "refuses a CSV over the size limit without reading it" do
+      sign_in_as admin
+      stub_const("Redirect::Import::MAX_BYTES", 10)
+
+      post tools_redirects_import_path, params: {file: Rack::Test::UploadedFile.new(StringIO.new("source_path,destination_url\n/a,/b\n"), "text/csv", original_filename: "r.csv")}
+
+      expect(flash[:alert]).to start_with("That CSV is over")
+      expect(Redirect.count).to eq(0)
+    end
+
     it "asks for a file" do
       sign_in_as admin
 

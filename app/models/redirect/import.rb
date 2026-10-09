@@ -4,20 +4,27 @@ require "csv"
 
 # One CSV import (Redirect.import_csv): what it created, updated, and couldn't
 # save, row by row. Row numbers count the header, so they match the line a
-# person sees in a spreadsheet.
+# person sees in a spreadsheet. The CSV is read a row at a time from its
+# string or IO, never parsed whole; callers refuse one over MAX_BYTES.
 class Redirect::Import
+  # Far more rules than any host takes (Cloudflare: 2,000), and small enough
+  # that an import can't tie up the app.
+  MAX_BYTES = 5.megabytes
+
   attr_reader :created, :updated, :errors
 
-  def initialize(text)
-    @text    = text
+  def self.too_big?(byte_size) = byte_size.to_i > MAX_BYTES
+
+  def initialize(source)
+    @source  = source
     @created = 0
     @updated = 0
     @errors  = []
   end
 
   def run
-    CSV.parse(@text, headers: true).each_with_index do |row, index|
-      import_row(row, line: index + 2)
+    CSV.new(@source, headers: true).each.with_index(2) do |row, line|
+      import_row(row, line: line)
     end
   end
 

@@ -9,8 +9,10 @@ class Tools::Redirects::ImportsController < ApplicationController
   def create
     file = params[:file]
 
-    if file.respond_to?(:read)
-      import = Redirect.import_csv(file.read)
+    if file.respond_to?(:to_io) && Redirect::Import.too_big?(file.size)
+      redirect_to tools_redirects_path, alert: "That CSV is over #{Redirect::Import::MAX_BYTES / 1.megabyte} MB."
+    elsif file.respond_to?(:to_io)
+      import = Redirect.import_csv(file.to_io)
       Redirect.track_event(:imported, created: import.created, updated: import.updated, errored: import.errored)
       redirect_to tools_redirects_path, notice: import.summary
     else
