@@ -4,8 +4,7 @@
 <% content_for :page_actions do %>
   <%= link_to "Edit the page", edit_page_path(@page.path), class: ui(:button) %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title,
-      description: "The fields this page carries besides its blocks, filled in on the page’s form." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= render "layouts/shared/errors", record: @page %>
 <%= form_with url: page_schema_path(@page.path), method: :patch, class: "flex flex-col gap-6" do %>

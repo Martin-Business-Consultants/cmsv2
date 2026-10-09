@@ -14,7 +14,7 @@
 <% end %>
 <div class="contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @sheet_webhook.present? %>"
      data-action="keydown.esc->dialog#close:stop">
-<%= render "layouts/shared/page_header", title: @page_title, description: "URLs the CMS calls when content changes, signed so the receiver can tell it’s us." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <section class="<%= ui(:panel, "overflow-x-auto") %>">
   <table class="data-table <%= ui(:table) %>">

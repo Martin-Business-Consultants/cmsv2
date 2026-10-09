@@ -15,7 +15,6 @@
 
       <div class="admin__content min-w-0">
         <main id="main" class="mx-auto max-w-7xl">
-          <%= render "layouts/shared/screen_options" %>
           <%= content_for?(:content) ? yield(:content) : yield %>
         </main>
       </div>

@@ -1,8 +1,7 @@
 <% @page_title = "Trash" %>
 <% can_write = Current.user.can?("trash:write") %>
 
-<%= render "layouts/shared/page_header", title: @page_title,
-      description: "Deleted pages, entries, globals and files, waiting to be restored or deleted for good. Anything here longer than 30 days is deleted for good each night." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= render "layouts/shared/status_links", param: :kind, current: @kind.to_s, options: trash_kind_links(@counts) %>
 

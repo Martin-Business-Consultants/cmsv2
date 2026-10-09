@@ -1,7 +1,6 @@
 <% @page_title = "Audit log" %>
 
-<%= render "layouts/shared/page_header", title: @page_title,
-      description: "Editorial actions across the workspace. Append-only: entries never change after they’re recorded." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= form_with url: audit_logs_path, method: :get, class: ui(:panel, "mb-6 flex flex-wrap items-end gap-4 p-4"), data: { turbo_action: "advance" } do %>
   <label class="space-y-1.5">

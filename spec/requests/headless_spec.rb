@@ -43,7 +43,7 @@ RSpec.describe "Headless", type: :request do
   it "explains the headless setup on the Developers screen, with the frontend's last build" do
     sign_in_as admin
     get developers_path
-    expect(response.body).to include("This CMS is headless", "/api/v1/pages/:path", "@librepublish/astro", "cms()", "No build has reported yet")
+    expect(response.body).to include("/api/v1/pages/:path", "@librepublish/astro", "cms()", "No build has reported yet")
 
     post "/api/frontend/builds", params: {integration: "librepublish-cms", integration_version: "1.0.0",
       framework: "astro", framework_version: "5.1.0", pages: 42}, headers: api_headers, as: :json

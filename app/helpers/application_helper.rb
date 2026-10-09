@@ -139,12 +139,20 @@ module ApplicationHelper
   # The site's branding for the layouts: logo, favicon, title and tokens.
   # Falls back to {} if anything goes wrong (no settings yet, etc.).
   def current_branding
+    @current_branding ||= read_branding
+  end
+
+  private
+
+  def read_branding
     branding = Setting.get("branding")
     general  = Setting.get("general")
 
     favicon_id = branding["favicon_id"]
     {
       logo_url:        branding_asset_url(branding["logo_id"]),
+      # The admin menu's: as wide as the menu, at twice its pixels.
+      logo_url_small:  branding_asset_url(branding["logo_id"], resize_to: 480),
       favicon_url:     branding_asset_url(favicon_id, resize_to: 64),
       favicon_url_180: branding_asset_url(favicon_id, resize_to: 180),
       favicon_type:    branding_asset_content_type(favicon_id),
@@ -158,8 +166,6 @@ module ApplicationHelper
   rescue StandardError
     {}
   end
-
-  private
 
   # An asset's URL (MediaLibrary) with two niceties:
   #   * `resize_to:` (px) asks for a resized rendition of a raster image, so

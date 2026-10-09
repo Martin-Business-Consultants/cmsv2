@@ -92,6 +92,13 @@
    bg-gray-50 lifts the sidebar off the canvas, and an accent fill lightens with
    dark words on it. Grays stay mixed from --neutral-tint and accents from
    --accent-*, so both follow branding. */
+/* Light chosen by the theme toggle: the browser's own controls (checkboxes,
+   radios, scrollbars, date pickers) draw light too, whatever the system's
+   setting, since the page says it supports both (<meta name="color-scheme">). */
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 html[data-theme="dark"] {
   color-scheme: dark;
   --color-white: var(--surface-dark);

@@ -7,7 +7,7 @@
     <%= render "collections/new_collection", collection: @new_collection || Collection.new, open: @new_collection.present? %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title, description: "Repeating content — posts, specials, team members — each with fields of its own." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <% if can_delete && @collections.any? %>
   <%= render "layouts/shared/bulk_actions", id: "collections_bulk", noun: "collection", deletion_path: collections_bulk_deletions_path,

@@ -5,7 +5,7 @@
     <%= render "layouts/shared/new_link", text: "New user", path: new_user_path %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title, description: "Everyone who can sign in to this workspace, and the role that decides what they can do." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <% can_delete = Current.user.can?("users:delete") %>
 <% if can_delete %>

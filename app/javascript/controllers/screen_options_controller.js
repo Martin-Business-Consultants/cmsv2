@@ -1,9 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
-// WordPress's Screen Options tab on a list screen: which of the table's
-// columns show. The choices are built from the table's own headers and kept
-// per screen in this browser (localStorage), and they reach rows loaded
-// later as the list scrolls. A screen without a table has no tab.
+// WordPress's Screen Options on a list screen, in the admin bar: which of the
+// table's columns show. The choices are built from the table's own headers
+// and kept per screen in this browser (localStorage). A screen without a
+// table has no tab.
 export default class extends Controller {
   static targets = [ "tab", "panel", "choices" ]
   static values = { screen: String }
@@ -25,9 +25,15 @@ export default class extends Controller {
   }
 
   toggle() {
-    const open = this.panelTarget.hidden
-    this.panelTarget.hidden = !open
-    this.tabTarget.setAttribute("aria-expanded", open)
+    this.#show(this.panelTarget.hidden)
+  }
+
+  close() {
+    this.#show(false)
+  }
+
+  closeOutside(event) {
+    if (!this.element.contains(event.target)) this.close()
   }
 
   change(event) {
@@ -69,6 +75,11 @@ export default class extends Controller {
       if (row.cells.length === 1) continue // a row across them all: nothing found, or a plugin's pagination
       Array.from(row.cells).forEach((cell, index) => { cell.hidden = hidden.has(String(index)) })
     }
+  }
+
+  #show(open) {
+    this.panelTarget.hidden = !open
+    this.tabTarget.setAttribute("aria-expanded", open)
   }
 
   get #key() {

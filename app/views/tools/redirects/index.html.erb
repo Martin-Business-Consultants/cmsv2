@@ -13,7 +13,7 @@
     addresses, and when a save is refused, the list opens with it. %>
 <div class="contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @sheet_redirect.present? %>"
      data-action="keydown.esc->dialog#close:stop">
-<%= render "layouts/shared/page_header", title: @page_title, description: "URL rules the public site applies at the edge." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <div class="mb-3 flex flex-wrap items-center justify-end gap-2">
   <% if Current.user.can?("redirects:write") %>

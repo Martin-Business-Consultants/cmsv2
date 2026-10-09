@@ -7,8 +7,7 @@
   <%= link_to "View sitemap.xml", "/sitemap.xml", class: ui(:button), target: "_blank", rel: "noopener" %>
   <button type="button" class="<%= ui(:button) %>" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= xml_url %>" data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy URL</button>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title,
-      description: "Every URL the public sitemap publishes, and the ones it leaves out. Quick edit a row to change its status, priority or indexing." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= render "layouts/shared/status_links", param: :show, current: @filter.to_s,
       options: [ [ "All", nil, @entries.size ], [ "Included", "included", included ], [ "Excluded", "excluded", @entries.size - included ] ] %>

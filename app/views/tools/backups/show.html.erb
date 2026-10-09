@@ -9,8 +9,7 @@
     <span>Download a backup</span>
   </button>
 <% end %>
-<%= render "layouts/shared/page_header", title: "Backup",
-      description: "Copies of this site: the ones taken automatically before every update, and one you download now — its database and every uploaded file, as one .tar.gz." %>
+<%= render "layouts/shared/page_header", title: "Backup" %>
 
 <% if @archives.any? %>
   <section class="<%= ui(:panel, "overflow-x-auto") %>">

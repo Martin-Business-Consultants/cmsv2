@@ -3,10 +3,18 @@ import { Controller } from "@hotwired/stimulus"
 // The admin menu's two states, both on <html> so CSS can style everything
 // from one place: data-menu="folded" (icons only, remembered in localStorage
 // and applied before paint by layouts/_menu_preference) and data-menu-open
-// (the drawer on narrow screens, closed again on every visit). And a third it
-// measures: data-menu-tall, while the menu is taller than the window, when it
-// scrolls with the page rather than on its own (admin.css: a scrolling menu
-// would clip its fly-outs in some browsers).
+// (the drawer on narrow screens, closed again on every visit). The menu stays
+// put while the page scrolls, and scrolls on its own when it's taller than
+// the window (admin.css).
+//
+// Which item's fly-out is open is this controller's (.admin-menu__item--open),
+// not :hover's, so the pointer can travel to a fly-out across other items:
+// one opens at once when none is, stays open CLOSE_DELAY after the pointer
+// leaves it, and gives way to another item's after SWITCH_DELAY, so passing
+// over an item on the way doesn't take over.
+const CLOSE_DELAY = 300
+const SWITCH_DELAY = 150
+
 export default class extends Controller {
   static targets = [ "foldToggle", "drawerToggle" ]
 
@@ -14,41 +22,58 @@ export default class extends Controller {
     this.closeDrawer = this.closeDrawer.bind(this)
     this.placeFlyout = this.placeFlyout.bind(this)
     this.replaceFlyout = this.replaceFlyout.bind(this)
-    this.measure = this.measure.bind(this)
+    this.hover = this.hover.bind(this)
+    this.leave = this.leave.bind(this)
     document.addEventListener("turbo:before-visit", this.closeDrawer)
-    this.#menu?.addEventListener("mouseover", this.placeFlyout)
+    this.#menu?.addEventListener("mouseover", this.hover)
+    this.#menu?.addEventListener("mouseleave", this.leave)
     this.#menu?.addEventListener("focusin", this.placeFlyout)
     this.#menu?.addEventListener("scroll", this.replaceFlyout, { passive: true })
-    window.addEventListener("scroll", this.replaceFlyout, { passive: true })
-    window.addEventListener("resize", this.measure)
-    this.measure()
     this.#sync()
   }
 
   disconnect() {
+    clearTimeout(this.timer)
     document.removeEventListener("turbo:before-visit", this.closeDrawer)
-    this.#menu?.removeEventListener("mouseover", this.placeFlyout)
+    this.#menu?.removeEventListener("mouseover", this.hover)
+    this.#menu?.removeEventListener("mouseleave", this.leave)
     this.#menu?.removeEventListener("focusin", this.placeFlyout)
     this.#menu?.removeEventListener("scroll", this.replaceFlyout)
-    window.removeEventListener("scroll", this.replaceFlyout)
-    window.removeEventListener("resize", this.measure)
   }
 
-  // Whether the menu's items reach past the bottom of the window (measured
-  // fixed, so the measure doesn't depend on the answer).
-  measure() {
-    const menu = this.#menu
-    if (!menu) return
+  // The pointer is over an item (or its fly-out, which sits inside it).
+  hover(event) {
+    const item = event.target.closest(".admin-menu__item")
+    const flyingOut = item?.querySelector(":scope > .admin-menu__submenu") ? item : null
+    clearTimeout(this.timer)
 
-    const root = document.documentElement
-    root.removeAttribute("data-menu-tall")
-    const tall = menu.scrollHeight > window.innerHeight - menu.getBoundingClientRect().top
-    root.toggleAttribute("data-menu-tall", tall)
+    if (flyingOut && flyingOut === this.open) return
+    if (!flyingOut) return this.#later(() => this.#openFlyout(null), CLOSE_DELAY)
+    if (!this.open) return this.#openFlyout(flyingOut)
+    this.#later(() => this.#openFlyout(flyingOut), SWITCH_DELAY)
   }
 
-  // Fly-outs are fixed, beside a menu that may scroll with the page, so they
-  // need placing: level with their item, shifted up just
-  // enough to stay in the window (Settings, at the bottom, opens upward).
+  leave() {
+    this.#later(() => this.#openFlyout(null), CLOSE_DELAY)
+  }
+
+  #later(action, delay) {
+    clearTimeout(this.timer)
+    this.timer = setTimeout(action, delay)
+  }
+
+  #openFlyout(item) {
+    this.open?.classList.remove("admin-menu__item--open")
+    this.open = item
+    if (!item) return
+
+    item.classList.add("admin-menu__item--open")
+    this.placeFlyout({ target: item })
+  }
+
+  // Fly-outs are fixed, beside the menu, so they need placing: level with
+  // their item, shifted up just enough to stay in the window (Settings, at
+  // the bottom, opens upward).
   placeFlyout(event) {
     const item = event.target.closest(".admin-menu__item")
     const flyout = item?.querySelector(":scope > .admin-menu__submenu")
@@ -65,9 +90,9 @@ export default class extends Controller {
     })
   }
 
-  // Scrolling moves the hovered item; keep its fly-out beside it.
+  // Scrolling the menu moves the open item; keep its fly-out beside it.
   replaceFlyout() {
-    const item = this.#menu.querySelector(".admin-menu__item:is(:hover, :focus-within)")
+    const item = this.open || this.#menu.querySelector(".admin-menu__item:focus-within")
     if (item) this.placeFlyout({ target: item })
   }
 
@@ -79,7 +104,6 @@ export default class extends Controller {
       delete document.documentElement.dataset.menu
     }
     try { localStorage.setItem("admin-menu", folded ? "folded" : "open") } catch (error) {}
-    this.measure()
     this.#sync()
   }
 

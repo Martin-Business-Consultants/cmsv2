@@ -10,7 +10,7 @@
     <%= link_to "Build", build_collection_entries_path(@collection.slug), class: ui(:button) %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title, description: "The shape of an entry in “" + @collection.name + "”, and how the collection behaves." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= render "layouts/shared/errors", record: @collection %>
 

@@ -7,6 +7,5 @@
           message: "Pages using it keep their blocks, which stop validating. This can’t be undone." %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title,
-      description: (@block_type.built_in ? "A built-in block type. Changes here apply to this site only." : "A custom block type.") %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 <%= render "block_types/form", block_type: @block_type %>

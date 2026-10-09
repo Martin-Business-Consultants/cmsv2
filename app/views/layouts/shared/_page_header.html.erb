@@ -1,10 +1,11 @@
-<%# locals: (title:, description: nil, icon: nil) %>
-<%# An admin page's title row, as WordPress sets it: the title, its primary
-    action as a button beside it (content_for :page_actions), then a line on
-    what the page is for. On a Settings page it goes above
+<%# locals: (title:, icon: nil, **) %>
+<%# An admin page's title row: the title, and its actions (content_for
+    :page_actions, a New button first) across from it at the right. No line
+    under it on what the page is for: other locals (a plugin's
+    description:) are taken and not shown. On a Settings page it goes above
     the page and its sidebar (layouts/settings) rather than where it's rendered. %>
 <% header = capture do %>
-<div class="page-title mb-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+<div class="page-title mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
   <h1 class="<%= ui(:page_title, "flex items-center gap-2") %>">
     <% if icon %>
       <%= icon_tag icon, class: "size-6 text-gray-400" %>
@@ -12,14 +13,11 @@
     <%= title %>
   </h1>
   <% if content_for?(:page_actions) %>
-    <div class="page-title__actions flex flex-wrap items-center gap-2">
+    <div class="page-title__actions ml-auto flex flex-wrap items-center justify-end gap-2">
       <%= content_for(:page_actions) %>
     </div>
   <% end %>
 </div>
-<% if description %>
-  <p class="mb-6 max-w-3xl text-sm text-gray-500"><%= description %></p>
-<% end %>
 <% if (cli = cli_command_hint) %>
   <p class="mb-4 flex flex-wrap items-center gap-2 text-xs text-gray-500">
     <span>From the CLI or MCP:</span>

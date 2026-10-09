@@ -58,6 +58,7 @@
     <% unless content_for?(:list_search) %>
       <%= render "layouts/shared/nav_filter" %>
     <% end %>
+    <%= render "layouts/shared/screen_options" %>
     <%= render "layouts/shared/theme_toggle" %>
     <div class="admin-bar__dropdown admin-bar__dropdown--end relative flex">
       <%= link_to settings_profile_path, class: muted_item_classes do %>

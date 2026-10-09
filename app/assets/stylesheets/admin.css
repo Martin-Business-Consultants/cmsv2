@@ -97,12 +97,9 @@
 
 /* The admin menu. */
 @layer components {
-  /* Fixed down the left, and never a scrolling box on a wide screen: some
-     browsers clip a fixed fly-out to a scrolling ancestor. When the menu is
-     taller than the window (html[data-menu-tall], admin_menu_controller), it
-     scrolls with the page instead, WordPress's way. The column behind it
-     keeps its gray down the window either way. On a narrow screen it's a
-     drawer that scrolls on its own (no fly-outs there). */
+  /* Fixed down the left: scrolling the page never moves it. Taller than the
+     window, it scrolls on its own. The column behind it keeps its gray down
+     the window. On a narrow screen it's a drawer (no fly-outs there). */
   .admin-menu {
     inline-size: var(--admin-menu-width);
     inset: var(--admin-bar-height) auto 0 0;
@@ -113,12 +110,13 @@
       inline-size: var(--admin-menu-folded-width);
     }
 
+    /* Fixed while the page scrolls, and scrolling on its own when it's
+       taller than the window: its fly-outs are fixed too, so it doesn't
+       clip them. */
     @media (min-width: 783px) {
-      :root[data-menu-tall] & {
-        inset-block-end: auto;
-        min-block-size: calc(100dvh - var(--admin-bar-height));
-        position: absolute;
-      }
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
     }
 
     @media (max-width: 782px) {
@@ -159,11 +157,13 @@
   }
 
   /* While an item's fly-out is open, a bridge from the item across the
-     menu's padding to the fly-out, which overlaps the menu's edge: part of
-     the item for :hover, so moving the pointer over doesn't close it. On the
-     item, not the fly-out, which scrolls and so would clip it. */
+     menu's padding to the fly-out, which overlaps the menu's edge, so moving
+     the pointer straight over stays in the item. On the item, not the
+     fly-out, which scrolls and so would clip it. Which fly-out is open is
+     admin_menu_controller's (.admin-menu__item--open), so a pointer crossing
+     other items on its way to one doesn't close it; focus opens one too. */
   @media (min-width: 783px) {
-    .admin-menu__item:has(> .admin-menu__submenu):is(:hover, :focus-within)::after {
+    .admin-menu__item:has(> .admin-menu__submenu):is(.admin-menu__item--open, :focus-within)::after {
       content: "";
       inset-block: 0;
       inset-inline-end: -1.5rem;
@@ -174,7 +174,7 @@
 
   /* An item keeps its hover look while the pointer is anywhere in it, its
      fly-out included, so it's clear which item the fly-out belongs to. */
-  .admin-menu__item:not(.admin-menu__item--current):is(:hover, :focus-within) > .admin-menu__link {
+  .admin-menu__item:not(.admin-menu__item--current):is(:hover, .admin-menu__item--open, :focus-within) > .admin-menu__link {
     background-color: var(--color-gray-100);
     color: var(--color-gray-900);
   }
@@ -211,8 +211,8 @@
   }
 
   @media (min-width: 783px) {
-    .admin-menu__item:not(.admin-menu__item--current):is(:hover, :focus-within) > .admin-menu__submenu,
-    :root[data-menu="folded"] .admin-menu__item:is(:hover, :focus-within) > .admin-menu__submenu {
+    .admin-menu__item:not(.admin-menu__item--current):is(.admin-menu__item--open, :focus-within) > .admin-menu__submenu,
+    :root[data-menu="folded"] .admin-menu__item:is(.admin-menu__item--open, :focus-within) > .admin-menu__submenu {
       background-color: var(--color-white);
       border: 1px solid var(--color-gray-200);
       border-radius: var(--radius-xl);
@@ -243,7 +243,7 @@
       display: none;
     }
 
-    :root[data-menu="folded"] .admin-menu__item:is(:hover, :focus-within) > .admin-menu__submenu {
+    :root[data-menu="folded"] .admin-menu__item:is(.admin-menu__item--open, :focus-within) > .admin-menu__submenu {
       display: block;
 
       .admin-menu__submenu-head {
@@ -372,10 +372,6 @@
 /* its caret turned up while it's open, and the column choices the controller
 /* builds. */
 @layer components {
-  .screen-options:has(> .screen-options__tab:not([hidden])) {
-    margin-block: calc(var(--spacing) * -3) calc(var(--spacing) * 2);
-  }
-
   .screen-options__tab[aria-expanded="true"] .icon {
     rotate: 180deg;
   }
@@ -386,3 +382,24 @@
     gap: calc(var(--spacing) * 2);
   }
 }
+
+/* The site's logo at the top of the admin menu, as wide as the menu; folded
+   to icons, its favicon instead (layouts/shared/_admin_menu). */
+@layer components {
+  .admin-menu__brand-favicon {
+    display: none;
+  }
+
+  @media (min-width: 783px) {
+    :root[data-menu="folded"] {
+      .admin-menu__brand-logo:has(+ .admin-menu__brand-favicon) {
+        display: none;
+      }
+
+      .admin-menu__brand-favicon {
+        display: block;
+      }
+    }
+  }
+}
+

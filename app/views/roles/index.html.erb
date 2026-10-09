@@ -5,7 +5,7 @@
     <%= render "layouts/shared/new_link", text: "New role", path: new_role_path %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title, description: "Named sets of capabilities. A user holds one role and can do exactly what it grants." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <% can_delete = Current.user.can?("roles:delete") %>
 <% if can_delete %>

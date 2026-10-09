@@ -9,7 +9,7 @@
     <%= render "pages/new_page", page: @new_page, templates: Page.available_templates %>
   <% end %>
 <% end %>
-<%= render "layouts/shared/page_header", title: @page_title, description: "Every page on the site, in its place in the tree." %>
+<%= render "layouts/shared/page_header", title: @page_title %>
 
 <%= render "layouts/shared/status_links", param: :status, current: @status.to_s,
       options: [ [ "All", nil, @status_counts.values.sum ] ] + Page::STATUSES.filter_map { |status| [ status.humanize, status, @status_counts[status] ] if @status_counts[status].to_i.positive? } %>
