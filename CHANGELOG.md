@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.5.2
+
 ### Changed
 - **A plugin's stylesheet loads only where the plugin shows something**: its
   own pages, the pages rendering one of its slots (Media's picker in the
