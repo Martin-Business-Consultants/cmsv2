@@ -17,6 +17,7 @@
 #   pages                       anything listing pages (navigation built from the tree)
 #   sitemap                     the sitemap
 #   redirects                   the redirect rules
+#   site                        the site's name, URL and contact details (/api/v1/site)
 module Deploys::Change
   module_function
 
@@ -33,6 +34,10 @@ module Deploys::Change
       describe(event, "global", subject, tags: ["global:#{subject.slug}"])
     when Redirect
       describe(event, "redirect", subject, tags: ["redirects"])
+    when Setting
+      # Settings › General: what /api/v1/site and contact_info blocks show,
+      # and the site URL the sitemap's addresses start with.
+      describe(event, "settings", subject, tags: ["site", "sitemap"])
     when nil
       {"event" => event, "tags" => []}
     else

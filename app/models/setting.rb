@@ -24,6 +24,14 @@ class Setting < ApplicationRecord
 
   validates :key, presence: true, uniqueness: true
 
+  # What a site shows from Settings › General (/api/v1/site, contact_info
+  # blocks, the sitemap's addresses): changing one rebuilds or purges it like
+  # a publish does, or it would keep the old name, phone or address.
+  SITE_FACING_GENERAL = %w[title description site_base_url default_locale phone email address_line1 city state zip].freeze
+
+  after_update_commit :redeploy_site, if: -> { key == "general" }
+  after_create_commit :redeploy_site, if: -> { key == "general" }
+
   scope :ordered, -> { order(:key) }
 
   def self.get(key)
@@ -77,5 +85,16 @@ class Setting < ApplicationRecord
     # "nothing stored" so the app boots and the settings page says "not set",
     # rather than 500ing on every request that reads a credential.
     {}
+  end
+
+  private
+
+  def redeploy_site
+    before, after = saved_change_to_data || previous_changes["data"] || [nil, nil]
+    before ||= {}
+    after ||= {}
+    return if SITE_FACING_GENERAL.all? { before[it].presence == after[it].presence }
+
+    Deploys.schedule_later(reason: "settings.general_updated", subject: self)
   end
 end
