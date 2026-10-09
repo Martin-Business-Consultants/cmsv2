@@ -22,9 +22,9 @@ Authenticate with the site's service token (Settings › Service tokens, the
 
 | Endpoint | What |
 |---|---|
-| `GET /api/v1/site` | Name, public URL, `default_locale`, `locales` (every one but the default is a path prefix: `/fr/…`), contact details, enabled plugins, and `plugin_config` (Forms: its captcha; Commerce: where quote requests post). |
+| `GET /api/v1/site` | Name, public URL, `default_locale`, `locales` (every one but the default is a path prefix: `/fr/…`), contact details, enabled plugins, and `plugin_config` (Forms: its captcha; Commerce: where quote requests post). `meta.cms_url` is the CMS's own address (`APP_HOST`), which asset URLs start with. |
 | `GET /api/v1/content[?since=<cursor>]` | Every live page (blocks expanded), entry and global — or, with a previous read's `meta.cursor`, only what changed, plus `data.removed` (what stopped being live). `meta.full: true` means replace what you have. A cursor older than 30 days gets a full answer. |
-| `GET /api/v1/pages[?locale=]`, `/api/v1/pages/<path>` | Live pages, blocks expanded, with `translations: [{locale, path}]`. |
+| `GET /api/v1/pages[?locale=]`, `/api/v1/pages/<path>` | Live pages, blocks expanded (below), with `translations: [{locale, path}]`. |
 | `GET /api/v1/collections`, `/collections/<slug>` | Collections and their fields. |
 | `GET /api/v1/collections/<slug>/entries[?locale=]`, `…/entries/<slug>` | Live entries, with translations. |
 | `GET /api/v1/globals`, `/globals/<slug>` | Globals' data (secret-looking values masked). |
@@ -37,6 +37,15 @@ Authenticate with the site's service token (Settings › Service tokens, the
 Forms and quote requests post straight from the browser to the CMS; CORS
 allows the origins in Settings › General.
 
+**Expanded blocks.** A block the CMS fills in carries `resolved` beside its
+`data`: a `collection_list` gets `{collection, entries, total, groups?}` —
+each entry with its `collection` and `url`, and only published entries, even
+when the block is set to show any status (that's for the admin's preview) —
+and a `contact_info` gets `{contact}`: the business name, phone, email and
+address from Settings › General. A page's `Cache-Tag` names what its blocks
+pull in (`collection:<slug>`, `site`), so publishing an entry purges the pages
+listing it.
+
 ## Builds and publishing
 
 A build reports itself to `POST /api/frontend/builds` with how it renders
@@ -48,4 +57,6 @@ a build hook, or Cloudflare), and sends an on-demand site a signed purge
 
 Cache tags, the same in `Cache-Tag` headers and purges: `page:<path>`,
 `entry:<collection>/<slug>`, `collection:<slug>`, `global:<slug>`, `pages`,
-`sitemap`, `redirects`, and, from Forms, `form:<slug>`.
+`sitemap`, `redirects`, `site` (Settings › General's name, URL and contact
+details: changing them rebuilds or purges like a publish), and, from Forms,
+`form:<slug>`.

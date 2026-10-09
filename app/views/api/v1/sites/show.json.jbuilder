@@ -12,4 +12,6 @@ json.data do
   # What each enabled plugin tells a build (Forms: its captcha), merged.
   json.plugin_config(Cms::Plugins.provided_all(:site_config).reduce({}, :merge))
 end
-json.meta({api_version: "v1", cms_version: Cms::VERSION})
+# cms_url: this CMS's own address (APP_HOST), which asset URLs start with —
+# a build allows it for remote images even when it reaches the API elsewhere.
+json.meta({api_version: "v1", cms_version: Cms::VERSION, cms_url: root_url(**Site.url_options).chomp("/")})

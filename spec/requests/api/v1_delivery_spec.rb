@@ -30,6 +30,21 @@ RSpec.describe "Delivery API v1", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  it "never lists a draft entry in a collection_list, and tags the page with the collection it lists" do
+    BlockType.create!(slug: "collection_list", label: "Collection list", fields: [{"name" => "collection_slug", "type" => "string", "label" => "Collection"}, {"name" => "filter_status", "type" => "string", "label" => "Status"}])
+    posts = Collection.create!(slug: "posts", name: "Posts", schema: {"fields" => []})
+    posts.entries.create!(slug: "out", title: "Out", status: "published", published_at: 1.day.ago, locale: "en")
+    posts.entries.create!(slug: "wip", title: "WIP", status: "draft", locale: "en")
+    page("blog", blocks: [{"type" => "collection_list", "data" => {"collection_slug" => "posts", "filter_status" => "any"}}])
+
+    get "/api/v1/pages/blog", headers: token
+
+    resolved = json.dig("data", "blocks", 0, "resolved")
+    expect(resolved["entries"].map { it["slug"] }).to eq(%w[out])
+    expect(resolved["entries"].first).to include("url" => "/posts/out", "collection" => "posts")
+    expect(response.headers["Cache-Tag"]).to eq("page:blog,collection:posts")
+  end
+
   it "reads a nested page by its path, with its translations" do
     group = TranslationGroup.create!(kind: "page")
     parent = page("company", translation_group: nil)
@@ -87,6 +102,7 @@ RSpec.describe "Delivery API v1", type: :request do
 
     expect(json["data"]).to include("name" => "Acme", "url" => "https://acme.test", "default_locale" => "en", "locales" => %w[en fr])
     expect(json.dig("meta", "api_version")).to eq("v1")
+    expect(json.dig("meta", "cms_url")).to match(%r{\Ahttps?://[^/]+\z})
   end
 
   it "publishes JSON Schema for block types, collections, globals and SEO, with the CMS's types" do

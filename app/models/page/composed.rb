@@ -7,8 +7,10 @@ module Page::Composed
 
   # The blocks with their dynamic data filled in (a collection list's
   # entries, the site's contact details), as the API serves them.
-  def expanded_blocks
-    Page::BlockExpansion.new(blocks).blocks
+  # live: only published entries in a collection_list, whatever it says (the
+  # delivery API's).
+  def expanded_blocks(live: false)
+    Page::BlockExpansion.new(blocks, live: live).blocks
   end
 
   private

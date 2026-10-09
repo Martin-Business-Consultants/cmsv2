@@ -4,11 +4,34 @@
 # doesn't need a second request per block: a `collection_list` gets the
 # entries it lists (filtered, sorted, grouped as the block says), and
 # `contact_info` gets the site's contact details.
+#
+# `live: true` is the delivery API's (/api/v1): only published entries, so a
+# list set to show drafts ("filter_status": "any") never puts one on a site.
 class Page::BlockExpansion
   ENTRY_SORTABLE = %w[published_at updated_at created_at title].freeze
+  # What contact_info shows: the business's name and how to reach it, not
+  # the rest of Settings › General.
+  CONTACT_KEYS = %w[title phone email address_line1 city state zip].freeze
 
-  def initialize(blocks)
+  # The cache tags of what the blocks pull in, beyond the page itself: a
+  # collection_list's collection, contact_info's site details. A publish
+  # names them (Deploys::Change), so the page is purged with them.
+  def self.cache_tags(blocks)
+    Array(blocks).filter_map do |block|
+      next unless block.is_a?(Hash)
+
+      case block["type"]
+      when "collection_list"
+        slug = block.dig("data", "collection_slug").to_s
+        "collection:#{slug}" if slug.present?
+      when "contact_info" then "site"
+      end
+    end.uniq
+  end
+
+  def initialize(blocks, live: false)
     @blocks = blocks
+    @live = live
   end
 
   def blocks
@@ -31,7 +54,7 @@ class Page::BlockExpansion
   private
 
   def contact_info
-    {"contact" => Setting.get("general")}
+    {"contact" => Setting.get("general").slice(*CONTACT_KEYS)}
   end
 
   def collection_list(data)
@@ -39,8 +62,8 @@ class Page::BlockExpansion
     collection = Collection.find_by(slug: slug)
     return {"error" => "collection not found", "slug" => slug, "entries" => [], "total" => 0} unless collection
 
-    scope = collection.entries
-    scope = scope.where(status: "published") unless data["filter_status"] == "any"
+    scope = collection.entries.includes(:collection, :category, :tags)
+    scope = scope.live if @live || data["filter_status"] != "any"
     scope = tagged(scope, collection, data["filter_tags"])
 
     sort_by = ENTRY_SORTABLE.include?(data["sort_by"]) ? data["sort_by"] : "published_at"
@@ -144,7 +167,8 @@ class Page::BlockExpansion
 
   def entry_hash(entry)
     entry.as_json(only: %i[id slug title status locale frontmatter body_markdown published_at updated_at])
-      .merge("category" => taxonomy_one(entry.category), "tags" => taxonomy_many(entry.tags))
+      .merge("collection" => entry.collection&.slug, "url" => entry.public_path,
+        "category" => taxonomy_one(entry.category), "tags" => taxonomy_many(entry.tags))
   end
 
   def taxonomy_one(entry)

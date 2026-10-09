@@ -10,12 +10,13 @@ class Api::V1::PagesController < Api::V1::BaseController
     scope = scope.where(locale: params[:locale]) if params[:locale].present?
     @pages = paginate(scope).to_a
     @assets = included_assets(pages: @pages)
-    cache_tags("pages", @pages.map { "page:#{it.path}" })
+    cache_tags("pages", @pages.map { "page:#{it.path}" }, @pages.flat_map { Page::BlockExpansion.cache_tags(it.blocks) })
   end
 
   def show
     @page = Page.live.find_by!(path: params[:path])
     @assets = included_assets(pages: [@page])
-    cache_tags("page:#{@page.path}")
+    # And what its blocks pull in, so publishing an entry purges the pages listing it.
+    cache_tags("page:#{@page.path}", Page::BlockExpansion.cache_tags(@page.blocks))
   end
 end
