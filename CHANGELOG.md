@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.6.0
+
 ### Security
 - **The API refuses what doesn't say who may call it.** Every core API
   action now declares a capability or opens itself on purpose; one that
