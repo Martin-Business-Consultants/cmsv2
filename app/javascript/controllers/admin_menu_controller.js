@@ -5,7 +5,8 @@ import { Controller } from "@hotwired/stimulus"
 // and applied before paint by layouts/_menu_preference) and data-menu-open
 // (the drawer on narrow screens, closed again on every visit). The menu stays
 // put while the page scrolls, and scrolls on its own when it's taller than
-// the window (admin.css).
+// the window (.admin-menu--scrolls, set here; Safari clips fly-outs to a
+// scrolling menu, so only one too tall to fit scrolls).
 //
 // Which item's fly-out is open is this controller's (.admin-menu__item--open),
 // not :hover's, so the pointer can travel to a fly-out across other items:
@@ -29,11 +30,13 @@ export default class extends Controller {
     this.#menu?.addEventListener("mouseleave", this.leave)
     this.#menu?.addEventListener("focusin", this.placeFlyout)
     this.#menu?.addEventListener("scroll", this.replaceFlyout, { passive: true })
+    this.#watchHeight()
     this.#sync()
   }
 
   disconnect() {
     clearTimeout(this.timer)
+    this.heightObserver?.disconnect()
     document.removeEventListener("turbo:before-visit", this.closeDrawer)
     this.#menu?.removeEventListener("mouseover", this.hover)
     this.#menu?.removeEventListener("mouseleave", this.leave)
@@ -115,6 +118,19 @@ export default class extends Controller {
   closeDrawer() {
     document.documentElement.removeAttribute("data-menu-open")
     this.#sync()
+  }
+
+  // The menu, and its list of items, change size with the window and with
+  // what's open; each time, scroll only if the items no longer fit.
+  #watchHeight() {
+    const menu = this.#menu
+    if (!menu) return
+
+    this.heightObserver = new ResizeObserver(() => {
+      menu.classList.toggle("admin-menu--scrolls", menu.scrollHeight > menu.clientHeight)
+    })
+    this.heightObserver.observe(menu)
+    for (const child of menu.children) this.heightObserver.observe(child)
   }
 
   get #menu() {

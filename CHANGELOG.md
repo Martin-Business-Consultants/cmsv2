@@ -8,6 +8,11 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **The admin menu's fly-outs show in Safari.** Safari clipped them to the
+  menu, which scrolls on its own, so hovering an item showed nothing. The
+  menu only scrolls now when it's taller than the window.
+
 ## 1.6.1
 
 ### Fixed
