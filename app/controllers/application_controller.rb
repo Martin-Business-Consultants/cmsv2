@@ -36,10 +36,14 @@ class ApplicationController < ActionController::Base
     params[:s].to_s.strip.presence
   end
 
-  # One page of an index list, Fizzy's way (geared_pagination: 15, then 30, 50,
-  # 100 a page), with @page for the view's "load more".
-  def paginate(records)
-    set_page_and_extract_portion_from records
+  # One page of an index table (Pagination), in @pagination for the
+  # numbered pagination under it (pagination_nav). A relation or an array.
+  # @page too, unless the controller keeps a page record there: plugins
+  # written before numbered pagination read it.
+  def paginate(records, per: Pagination::PER_PAGE)
+    @pagination = Pagination.new(records, page: params[:page], per: per)
+    @page ||= @pagination
+    @pagination.records
   end
 
   def authenticate

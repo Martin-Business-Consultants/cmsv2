@@ -8,7 +8,6 @@ gem "bootsnap", require: false
 gem "commonmarker"
 gem "csv"
 gem "fugit"
-gem "geared_pagination", "~> 1.2"
 gem "herb", "~> 0.11.0"
 gem "image_processing", "~> 1.2"
 gem "importmap-rails", "~> 2.2"

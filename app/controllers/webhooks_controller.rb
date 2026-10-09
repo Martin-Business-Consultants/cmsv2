@@ -16,11 +16,11 @@ class WebhooksController < ApplicationController
   skip_before_action :set_webhook, only: [:index, :new, :create]
 
   def index
-    @webhooks = Webhook.ordered
+    @webhooks = paginate(Webhook.ordered)
   end
 
   def show
-    @deliveries = @webhook.deliveries.recent(50)
+    @deliveries = paginate(@webhook.deliveries.order(created_at: :desc))
   end
 
   def new

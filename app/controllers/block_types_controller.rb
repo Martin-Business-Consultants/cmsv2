@@ -16,6 +16,7 @@ class BlockTypesController < ApplicationController
     @categories = BlockType.where.not(category: [nil, ""]).distinct.order(:category).pluck(:category)
     @block_types = BlockType.ordered.search_list(search_term)
     @block_types = @block_types.where(category: @category) if @category
+    @block_types = paginate(@block_types)
   end
 
   def new

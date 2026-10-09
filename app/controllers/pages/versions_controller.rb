@@ -8,9 +8,7 @@ class Pages::VersionsController < ApplicationController
   include PageScoped
 
   def index
-    # Not `paginate`: it keeps its page in @page, which here is the page.
-    @versions_page = current_page_from(@page.versions.newest_first.includes(:author))
-    @versions = @versions_page.records
+    @versions = paginate(@page.versions.newest_first.includes(:author))
   end
 
   def show

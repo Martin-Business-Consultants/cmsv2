@@ -11,7 +11,7 @@ class UsersController < ApplicationController
   before_action :set_user, only: [:edit, :update, :destroy]
 
   def index
-    @users = User.includes(:role).order(:name, :email).search_list(search_term)
+    @users = paginate(User.includes(:role).order(:name, :email).search_list(search_term))
   end
 
   def new

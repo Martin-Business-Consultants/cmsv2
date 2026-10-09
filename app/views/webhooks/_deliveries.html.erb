@@ -1,4 +1,4 @@
-<%# locals: (deliveries:) %>
+<%# locals: (deliveries:, pagination: nil) %>
 <section class="space-y-3">
   <h2 class="<%= ui(:heading) %>">Recent deliveries</h2>
   <div class="<%= ui(:panel, "overflow-x-auto") %>">
@@ -33,4 +33,5 @@
       </tbody>
     </table>
   </div>
+  <%= pagination_nav pagination %>
 </section>

@@ -66,7 +66,7 @@ export default class extends Controller {
   #apply() {
     const hidden = new Set(this.#hidden())
     for (const row of this.table.rows) {
-      if (row.cells.length === 1) continue // a "load more" row spans them all
+      if (row.cells.length === 1) continue // a row across them all: nothing found, or a plugin's pagination
       Array.from(row.cells).forEach((cell, index) => { cell.hidden = hidden.has(String(index)) })
     }
   }

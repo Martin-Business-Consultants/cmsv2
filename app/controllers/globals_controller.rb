@@ -14,7 +14,7 @@ class GlobalsController < ApplicationController
   before_action :set_global, only: [:edit, :update, :destroy]
 
   def index
-    @globals = Global.ordered.search_list(search_term)
+    @globals = paginate(Global.ordered.search_list(search_term))
   end
 
   # The list with its New global sheet open.

@@ -8,9 +8,7 @@ class Collections::Entries::VersionsController < ApplicationController
   include EntryScoped
 
   def index
-    # Not `paginate`: it keeps its page in @page, which here is the page.
-    @versions_page = current_page_from(@entry.versions.newest_first.includes(:author))
-    @versions = @versions_page.records
+    @versions = paginate(@entry.versions.newest_first.includes(:author))
   end
 
   def show

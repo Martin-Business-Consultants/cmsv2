@@ -18,7 +18,7 @@ class PagesController < ApplicationController
     @locale = params[:locale].presence
     @locales = Page.distinct.order(:locale).pluck(:locale)
     @status_counts = Page.group(:status).count
-    @pages = filtered_pages
+    @pages = paginate(filtered_pages)
     @new_page ||= Page.new(status: "draft", locale: "en")
   end
 

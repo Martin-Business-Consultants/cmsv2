@@ -51,6 +51,7 @@
     </tbody>
   </table>
 </section>
+<%= pagination_nav @pagination %>
 
 <dialog class="<%= ui(:sheet, "dialog--sheet-half") %>" data-dialog-target="dialog" aria-label="Webhook" closedby="any">
   <% if @sheet_webhook %>

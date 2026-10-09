@@ -24,6 +24,7 @@ class SitemapsController < ApplicationController
     if (term = search_term&.downcase)
       @shown = @shown.select { |entry| [entry.title, entry.loc].compact.any? { it.downcase.include?(term) } }
     end
+    @shown = paginate(@shown)
     @records = records_for(@shown)
     @base_url = configured_site_base_url.presence || derived_base_url
   end

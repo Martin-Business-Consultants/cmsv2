@@ -31,7 +31,7 @@
 </div>
 
 <section class="<%= ui(:panel, "overflow-x-auto") %>">
-  <table class="data-table <%= ui(:table) %>" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+  <table class="data-table <%= ui(:table) %>">
     <thead>
       <tr>
         <th class="<%= ui(:th) %>">When</th>
@@ -41,7 +41,7 @@
         <th class="<%= ui(:th) %>">Detail</th>
       </tr>
     </thead>
-    <tbody id="<%= pagination_frame_id_for(:audit_rows, @page.number) %>">
+    <tbody>
       <% @entries.each do |entry| %>
         <%# herb:key entry.id %>
         <tr id="<%= dom_id(entry) %>" class="hover:bg-gray-50" data-filter-target="item">
@@ -66,8 +66,9 @@
           <td class="<%= ui(:td) %>"><span class="font-mono text-xs text-gray-500"><%= audit_metadata(entry.metadata) %></span></td>
         </tr>
       <% end %>
-      <%= table_next_page_row :audit_rows, @page, columns: 5 %>
       <%= table_empty_row("No entries match.", columns: 5) if @entries.none? %>
     </tbody>
   </table>
 </section>
+
+<%= pagination_nav @pagination %>

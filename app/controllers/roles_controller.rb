@@ -11,7 +11,7 @@ class RolesController < ApplicationController
   before_action :reject_system_edit, only: [:update, :destroy]
 
   def index
-    @roles = Role.ordered.includes(:users).search_list(search_term)
+    @roles = paginate(Role.ordered.includes(:users).search_list(search_term))
   end
 
   def new

@@ -8,5 +8,5 @@
     <p class="font-mono text-sm break-all text-gray-900"><%= @webhook.url %></p>
     <p class="flex flex-wrap items-center gap-2 text-sm text-gray-500"><%= webhook_health(@webhook) %> <span><%= Array(@webhook.events).join(", ") %></span></p>
   </div>
-  <%= render "webhooks/deliveries", deliveries: @deliveries %>
+  <%= render "webhooks/deliveries", deliveries: @deliveries, pagination: @pagination %>
 </div>

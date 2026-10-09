@@ -20,7 +20,7 @@ class TrashController < ApplicationController
 
   def index
     @kind = params[:kind].presence_in(Trash.kinds.keys)
-    @entries = Trash.contents(kind: @kind)
+    @entries = paginate(Trash.contents(kind: @kind, limit: nil))
     @counts = Trash.counts
   end
 

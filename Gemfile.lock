@@ -158,9 +158,6 @@ GEM
     fugit (1.13.0)
       et-orbi (~> 1.4)
       raabro (~> 1.4)
-    geared_pagination (1.2.0)
-      activesupport (>= 5.0)
-      addressable (>= 2.5.0)
     globalid (1.4.0)
       activesupport (>= 6.1)
     herb (0.11.0-aarch64-linux-gnu)
@@ -482,7 +479,6 @@ DEPENDENCIES
   debug
   factory_bot_rails
   fugit
-  geared_pagination (~> 1.2)
   hello!
   herb (~> 0.11.0)
   image_processing (~> 1.2)

@@ -12,7 +12,7 @@ class CollectionsController < ApplicationController
   before_action :set_collection, only: [:edit, :update, :destroy]
 
   def index
-    @collections = Collection.order(:slug).search_list(search_term).to_a
+    @collections = paginate(Collection.order(:slug).search_list(search_term)).to_a
     @entry_counts = CollectionEntry.where(collection_id: @collections.map(&:id)).group(:collection_id).count
   end
 

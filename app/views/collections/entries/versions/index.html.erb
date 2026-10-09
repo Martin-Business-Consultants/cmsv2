@@ -6,5 +6,5 @@
 <% end %>
 <%= render "layouts/shared/page_header", title: "Revisions of “" + @entry.title.to_s + "”",
       description: "A copy of the entry’s fields, body and blocks is kept each time they change. Compare one with the entry now, or restore it." %>
-<%= render "versions/list", versions: @versions, page: @versions_page,
+<%= render "versions/list", versions: @versions, pagination: @pagination,
       show_path: ->(version) { collection_entry_version_path(@collection.slug, @entry.slug, version) } %>
