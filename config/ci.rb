@@ -14,6 +14,9 @@ CI.run do
     "--add-engines-path #{Dir["engines/*"].join(",")}"
 
   step "Tests: Rails", "bin/rspec"
+  # The default plugins (bin/setup installs them into plugins/) carry their
+  # own specs, which run inside the CMS.
+  step "Tests: Plugins", "bin/rspec plugins/*/spec"
   step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
 
   # Optional: set a green GitHub commit status to unblock PR merge.

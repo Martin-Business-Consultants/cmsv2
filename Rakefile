@@ -11,5 +11,6 @@ if Rails.env.local?
   require "rubocop/rake_task"
   RuboCop::RakeTask.new
 
-  task default: %i[rubocop:autocorrect]
+  # Checks, and changes nothing: `bin/rubocop -a` corrects style on purpose.
+  task default: %i[rubocop spec]
 end

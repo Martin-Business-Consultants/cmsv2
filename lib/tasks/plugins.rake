@@ -33,8 +33,7 @@ namespace :plugins do
     directory = plugins_directory.join(name)
     abort "#{directory} already exists. To update it: bin/rails \"plugins:update[#{name}]\"" if directory.exist?
 
-    branch = args[:ref].present? ? ["--branch", args[:ref]] : []
-    run! "git", "clone", "--depth", "1", *branch, url, directory.to_s
+    clone_plugin(url, args[:ref].presence, directory)
     if Dir.glob(directory.join("*.gemspec")).none?
       directory.rmtree
       abort "#{name} isn't a CMS plugin: no gemspec. Nothing was installed."
@@ -57,7 +56,7 @@ namespace :plugins do
 
     missing.each do |name, source|
       url, ref = source.split("#", 2)
-      run! "git", "clone", "--depth", "1", *(["--branch", ref] if ref), url, plugins_directory.join(name).to_s
+      clone_plugin(url, ref, plugins_directory.join(name))
     end
     apply_plugin_changes!
     puts "\nInstalled #{missing.keys.join(", ")}. Switch them on in Settings › Plugins if they aren't already."
@@ -71,7 +70,13 @@ namespace :plugins do
     directories.each do |directory|
       abort "No plugin at #{directory}" unless directory.join(".git").exist?
       puts "== #{directory.basename} =="
-      run! "git", "-C", directory.to_s, "pull", "--ff-only"
+      # A plugin installed at a commit (default_plugins.yml pins them) stays
+      # there until it's pinned elsewhere.
+      if system("git", "-C", directory.to_s, "symbolic-ref", "-q", "HEAD", out: File::NULL)
+        run! "git", "-C", directory.to_s, "pull", "--ff-only"
+      else
+        puts "Pinned at #{`git -C #{directory} rev-parse --short HEAD`.strip}; not updated."
+      end
     end
     apply_plugin_changes!
   end
@@ -87,6 +92,17 @@ namespace :plugins do
   end
 
   def plugins_directory = Rails.root.join("plugins")
+
+  # Clones a plugin at `ref`: a tag or branch, or a commit (40 hex digits),
+  # which is how default_plugins.yml pins the defaults.
+  def clone_plugin(url, ref, directory)
+    if ref&.match?(/\A\h{40}\z/)
+      run! "git", "clone", "--quiet", url, directory.to_s
+      run! "git", "-C", directory.to_s, "checkout", "--quiet", ref
+    else
+      run! "git", "clone", "--depth", "1", *(["--branch", ref] if ref), url, directory.to_s
+    end
+  end
 
   def default_plugins
     YAML.safe_load_file(Rails.root.join("config/default_plugins.yml")) || {}

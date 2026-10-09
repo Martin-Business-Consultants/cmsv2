@@ -8,7 +8,7 @@
 #
 # Every install gets the default plugins (config/default_plugins.yml), plus
 # what the CMS_PLUGINS builder secret lists: git URLs, each optionally with
-# #<tag or branch>, separated by spaces, commas or newlines. `-name` leaves a
+# #<tag, branch or commit>, separated by spaces, commas or newlines. `-name` leaves a
 # default out (to go without it, or swap in another), "none" installs
 # nothing at all, defaults included, and "default" stands for the defaults
 # alone, for a host such as Hoster that won't keep an empty secret. A secret
@@ -56,11 +56,17 @@ entries.each do |name, entry|
   abort "Two plugins named #{name} in CMS_PLUGINS." if File.exist?(directory)
 
   puts "Fetching #{name} from #{redact(url)}#{" at #{ref}" if ref}"
-  branch = ref ? ["--branch", ref] : []
   # The URL may carry a token, so git's own output (which can echo it) is kept out of the build log.
-  unless system("git", "clone", "--quiet", "--depth", "1", *branch, url, directory, err: File::NULL, out: File::NULL)
-    abort "Couldn't clone #{redact(url)}#{" at #{ref}" if ref}: check the URL, the ref and, for a private repository, its token."
+  quiet = {err: File::NULL, out: File::NULL}
+  cloned = if ref&.match?(/\A\h{40}\z/)
+    # A commit (how default_plugins.yml pins the defaults): fetched alone.
+    system("git", "init", "--quiet", directory, **quiet) &&
+      system("git", "-C", directory, "fetch", "--quiet", "--depth", "1", url, ref, **quiet) &&
+      system("git", "-C", directory, "checkout", "--quiet", "FETCH_HEAD", **quiet)
+  else
+    system("git", "clone", "--quiet", "--depth", "1", *(["--branch", ref] if ref), url, directory, **quiet)
   end
+  abort "Couldn't clone #{redact(url)}#{" at #{ref}" if ref}: check the URL, the ref and, for a private repository, its token." unless cloned
   # No history, and no remote URL holding a token, in the image.
   FileUtils.rm_rf File.join(directory, ".git")
   abort "#{name} isn't a CMS plugin: no gemspec at its top level." if Dir.glob(File.join(directory, "*.gemspec")).empty?

@@ -51,7 +51,9 @@ installed from their own repositories (below):
   `plugins/` before bundling (`bin/fetch-plugins`, docs/install.md).
 
   - **Default** plugins are installed ones that every install gets at
-    setup: `config/default_plugins.yml` lists them (Forms and Media).
+    setup: `config/default_plugins.yml` lists them (Forms and Media), each
+    pinned to the commit the release is tested with (CI runs their specs);
+    `plugins:update` leaves a pinned plugin where it is.
     `bin/setup` and `bin/install` run `bin/rails plugins:install_defaults`,
     which installs any that aren't there; a Docker build fetches them along
     with `CMS_PLUGINS`. They stay ordinary plugins, so an install can go

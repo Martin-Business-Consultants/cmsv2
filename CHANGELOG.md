@@ -131,6 +131,18 @@ out.
   installs behind Cloudflare or a load balancer, now does what it says
   (it was ignored). **Behind a proxy that forwards plain HTTP, set
   `ASSUME_SSL=true` before updating**, or the redirect loops.
+- **A production install checks its configuration as it boots.** A missing
+  `SECRET_KEY_BASE`, or a value the app would misread (`APP_PROTOCOL`,
+  `APP_HOST` with a scheme, a true/false or number that isn't one,
+  `CMS_UPDATES`, `MAIL_FROM_ADDRESS`, half of Hoster's settings) stops the
+  boot naming each problem. A missing `APP_HOST` or `SMTP_PASSWORD`, a short
+  `SECRET_KEY_BASE` or some but not all `AR_ENCRYPTION_*` keys are logged.
+- **Builds get the code that was tested.** The default plugins are pinned to
+  a commit in `config/default_plugins.yml` (`bin/fetch-plugins`,
+  `plugins:install_defaults` and `CMS_PLUGINS` take a commit as the ref), CI
+  runs their specs, and every gem in the Gemfile is held to its tested major
+  version. `bin/rake` with no task checks style and runs the specs, where it
+  used to rewrite files with RuboCop's corrections.
 
 ## 1.5.4
 
