@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.5.3
+
 ### Fixed
 - **A plugin's install, update or removal no longer waits 15 minutes when
   the restart after it fails.** The migrate and restart that follow it now
