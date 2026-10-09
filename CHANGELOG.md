@@ -25,10 +25,6 @@ out.
   `webhook_url`, which stopped rebuilds and sent the signed purges there. A
   report now only keeps a site rebuilt on publish; anything else waits for
   approval in Settings › Deploy (or `POST /api/frontend/delivery_approval`).
-
-### Fixed
-- **API search finds entries.** It answered 500 for any query, since the
-  shared search index takes no loading scope.
 - **Webhooks, build hooks and purges can't be pointed into the CMS's own
   network.** A URL that resolves to a loopback, private, link-local (cloud
   metadata), carrier-grade NAT, multicast or IPv6 local address — written
@@ -39,87 +35,6 @@ out.
   `CMS_ALLOW_PRIVATE_WEBHOOKS=true`.
 - **A webhook delivery no longer keeps what the receiver answered**, only
   its status, timing and error. The bodies already stored are removed.
-### Fixed
-- **One page or entry that can't be published no longer holds up every
-  schedule.** The scheduler flips each record on its own: one that fails
-  validation has its schedule cleared and the failure recorded in the audit
-  log (`page.schedule_failed`, `entry.schedule_failed`, with why), one that
-  hits a passing error (the database busy) is left for the next minute, and
-  the rest go out either way; pages failing no longer stops entries. The run
-  fails afterwards, naming what was left, so Solid Queue keeps it. Two runs
-  at once flip and announce a record once.
-- **A deploy that fails keeps its changes for the next one.** A build or
-  purge used to clear the list of what changed before firing, so a failure
-  lost it; now it's cleared once every attempt succeeded, and only of what
-  went out. A deploy job run twice fires once, and a change scheduled while
-  one fires is no longer dropped.
-- **Settings written at the same moment no longer overwrite each other.**
-  `Setting.set` and `Setting.set_secret` read and write their row in one
-  transaction; `Setting.set` takes a block for a value worked out from the
-  current one (the deploy log, pending changes, a counter).
-- **Jobs retry when the database was busy** (SQLite's "database is locked",
-  a full connection pool), up to five times, and drop a job whose record was
-  deleted before it ran.
-- **Clearing a value this install's keys can't read is recorded.** Replacing
-  such a token or secret now writes `<model>.unreadable_value_cleared` to the
-  audit log with the ciphertext, so the right keys can still recover it if
-  the keys were only misconfigured, and logs an error.
-
-### Added
-- **Saving over someone else's change is refused, in the admin and the
-  API.** Pages, entries and globals have a `lock_version`. The admin's forms
-  send the one they opened and say so instead of overwriting; the API
-  answers reads and writes with `X-Lock-Version` and refuses a write that
-  sends an older `lock_version` with 409 (docs/agent-interface.md). A write
-  that sends none is applied as before.
-### Added
-- **A backup every night, and a way to copy it off the server.** The whole
-  data directory is archived at 2am, kept with the update backups
-  (`CMS_BACKUP_KEEP`), and handed to `CMS_BACKUP_COMMAND` when one is set
-  (`rclone`, `aws s3 cp`, `scp`: it gets the archive's path). A failed copy
-  fails the job. `CMS_BACKUP_NIGHTLY=false` turns it off.
-- **Versions are kept to the newest 100 per page and entry** (`CMS_VERSIONS_KEEP`);
-  older ones are deleted nightly.
-
-### Fixed
-- **Backups are checked before anything trusts them.** Each database in a
-  data backup is checked (`PRAGMA quick_check`) and a copy that stops short
-  fails the backup, so an update never migrates on the strength of one that
-  wouldn't restore. Before, a copy that hit a lock was archived as it was.
-- **Tools › Backup's download is a consistent snapshot**, taken with SQLite's
-  online backup instead of reading the live file, and fails rather than
-  shipping without its database. It's built on disk and streamed, not held
-  in memory, and its manifest names any uploaded file that was missing
-  instead of leaving it out without a word.
-- **A person who ever edited a page or entry can be deleted.** Their
-  versions keep their content and lose their author; before, the delete
-  failed. Likewise a category entry other entries use can be purged from the
-  trash (they become uncategorized), and a collection another one draws its
-  categories or tags from can be deleted.
-- **The nightly trash purge keeps going past a record it can't delete**,
-  reporting it, instead of stopping there every night; a purge is recorded
-  only once the record is gone, and deleting several collections is all or
-  nothing.
-- **A redirect import reads its CSV a row at a time** and refuses one over
-  5 MB (`413` from `/api/redirects/import`).
-### Added
-- **The delivery API answers an unchanged read with 304, caches `/content`,
-  and limits each token.** `/content`'s `ETag` stands for the content it was
-  built from (not its bytes, which carry a fresh cursor), so a build that
-  sends it back gets `304`; its `data` is cached until a page, entry,
-  global, collection, tag, translation or setting changes, with assets
-  resolved fresh. Each token gets 1,200 requests a minute across `/api/v1`
-  (`CMS_DELIVERY_RATE_LIMIT`, `0` for none), then `429` with `Retry-After`.
-
-### Fixed
-- **Every `/api` error is JSON in one shape**, `{"error", "message"}`: a
-  missing parameter or a body that isn't JSON is a `400`, a format the
-  endpoint doesn't serve a `406`, a lost race a `409`, an `/api` path no
-  route matches a JSON `404`, and anything unexpected a `500` that's
-  reported and never shows a backtrace. Before, these came back in Rails'
-  `{"status", "error"}` shape, or as an HTML page. The bodies the API
-  already answered (`not_found`, `invalid`, `forbidden` with its
-  `capability`) are unchanged.
 - **Sign-in sessions end.** A session lasts 30 days from sign-in and ends
   after 14 days unused; an ended one signs no one in, and a daily job
   deletes it. Its cookie is HttpOnly, SameSite=Lax, Secure over HTTPS, and
@@ -147,6 +62,84 @@ out.
   09d97f7) streams each image out of the zip, refusing one past 50 MB
   unpacked or 100 megapixels, and stops an archive at 2 GB unpacked or
   2,000 images; it used to read every image into memory first.
+
+### Added
+- **Saving over someone else's change is refused, in the admin and the
+  API.** Pages, entries and globals have a `lock_version`. The admin's forms
+  send the one they opened and say so instead of overwriting; the API
+  answers reads and writes with `X-Lock-Version` and refuses a write that
+  sends an older `lock_version` with 409 (docs/agent-interface.md). A write
+  that sends none is applied as before.
+- **A backup every night, and a way to copy it off the server.** The whole
+  data directory is archived at 2am, kept with the update backups
+  (`CMS_BACKUP_KEEP`), and handed to `CMS_BACKUP_COMMAND` when one is set
+  (`rclone`, `aws s3 cp`, `scp`: it gets the archive's path). A failed copy
+  fails the job. `CMS_BACKUP_NIGHTLY=false` turns it off.
+- **Versions are kept to the newest 100 per page and entry** (`CMS_VERSIONS_KEEP`);
+  older ones are deleted nightly.
+- **The delivery API answers an unchanged read with 304, caches `/content`,
+  and limits each token.** `/content`'s `ETag` stands for the content it was
+  built from (not its bytes, which carry a fresh cursor), so a build that
+  sends it back gets `304`; its `data` is cached until a page, entry,
+  global, collection, tag, translation or setting changes, with assets
+  resolved fresh. Each token gets 1,200 requests a minute across `/api/v1`
+  (`CMS_DELIVERY_RATE_LIMIT`, `0` for none), then `429` with `Retry-After`.
+
+### Fixed
+- **API search finds entries.** It answered 500 for any query, since the
+  shared search index takes no loading scope.
+- **One page or entry that can't be published no longer holds up every
+  schedule.** The scheduler flips each record on its own: one that fails
+  validation has its schedule cleared and the failure recorded in the audit
+  log (`page.schedule_failed`, `entry.schedule_failed`, with why), one that
+  hits a passing error (the database busy) is left for the next minute, and
+  the rest go out either way; pages failing no longer stops entries. The run
+  fails afterwards, naming what was left, so Solid Queue keeps it. Two runs
+  at once flip and announce a record once.
+- **A deploy that fails keeps its changes for the next one.** A build or
+  purge used to clear the list of what changed before firing, so a failure
+  lost it; now it's cleared once every attempt succeeded, and only of what
+  went out. A deploy job run twice fires once, and a change scheduled while
+  one fires is no longer dropped.
+- **Settings written at the same moment no longer overwrite each other.**
+  `Setting.set` and `Setting.set_secret` read and write their row in one
+  transaction; `Setting.set` takes a block for a value worked out from the
+  current one (the deploy log, pending changes, a counter).
+- **Jobs retry when the database was busy** (SQLite's "database is locked",
+  a full connection pool), up to five times, and drop a job whose record was
+  deleted before it ran.
+- **Clearing a value this install's keys can't read is recorded.** Replacing
+  such a token or secret now writes `<model>.unreadable_value_cleared` to the
+  audit log with the ciphertext, so the right keys can still recover it if
+  the keys were only misconfigured, and logs an error.
+- **Backups are checked before anything trusts them.** Each database in a
+  data backup is checked (`PRAGMA quick_check`) and a copy that stops short
+  fails the backup, so an update never migrates on the strength of one that
+  wouldn't restore. Before, a copy that hit a lock was archived as it was.
+- **Tools › Backup's download is a consistent snapshot**, taken with SQLite's
+  online backup instead of reading the live file, and fails rather than
+  shipping without its database. It's built on disk and streamed, not held
+  in memory, and its manifest names any uploaded file that was missing
+  instead of leaving it out without a word.
+- **A person who ever edited a page or entry can be deleted.** Their
+  versions keep their content and lose their author; before, the delete
+  failed. Likewise a category entry other entries use can be purged from the
+  trash (they become uncategorized), and a collection another one draws its
+  categories or tags from can be deleted.
+- **The nightly trash purge keeps going past a record it can't delete**,
+  reporting it, instead of stopping there every night; a purge is recorded
+  only once the record is gone, and deleting several collections is all or
+  nothing.
+- **A redirect import reads its CSV a row at a time** and refuses one over
+  5 MB (`413` from `/api/redirects/import`).
+- **Every `/api` error is JSON in one shape**, `{"error", "message"}`: a
+  missing parameter or a body that isn't JSON is a `400`, a format the
+  endpoint doesn't serve a `406`, a lost race a `409`, an `/api` path no
+  route matches a JSON `404`, and anything unexpected a `500` that's
+  reported and never shows a backtrace. Before, these came back in Rails'
+  `{"status", "error"}` shape, or as an HTML page. The bodies the API
+  already answered (`not_found`, `invalid`, `forbidden` with its
+  `capability`) are unchanged.
 
 ## 1.5.4
 

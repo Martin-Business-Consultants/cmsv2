@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_120200) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -128,6 +128,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
     t.datetime "deleted_at"
     t.json "frontmatter", default: {}, null: false
     t.string "locale", default: "en", null: false
+    t.integer "lock_version", default: 0, null: false
     t.datetime "publish_at"
     t.datetime "published_at"
     t.json "seo", default: {}, null: false
@@ -261,6 +262,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
     t.datetime "deleted_at"
     t.string "description"
     t.string "icon"
+    t.integer "lock_version", default: 0, null: false
     t.string "name", null: false
     t.json "schema", default: {}, null: false
     t.string "slug", null: false
@@ -329,6 +331,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
     t.integer "depth", default: 0, null: false
     t.json "frontmatter", default: {}, null: false
     t.string "locale", default: "en", null: false
+    t.integer "lock_version", default: 0, null: false
     t.integer "parent_id"
     t.string "path", null: false
     t.datetime "publish_at"
@@ -442,6 +445,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
+    t.datetime "last_seen_at"
     t.datetime "updated_at", null: false
     t.string "user_agent"
     t.integer "user_id", null: false

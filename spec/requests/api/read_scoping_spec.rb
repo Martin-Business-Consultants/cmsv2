@@ -93,5 +93,19 @@ RSpec.describe "API reads, scoped to the token", type: :request do
       expect(json.dig("data", "entries").map { it["slug"] }).to eq(%w[pricing-live])
       expect(json.dig("data", "globals").map { it["slug"] }).to eq(%w[footer])
     end
+
+    it "doesn't serve a pages-only token the cached answer of a token that reads everything" do
+      caching = ActionController::Base.perform_caching
+      ActionController::Base.perform_caching = true
+
+      get "/api/v1/content", headers: auth(%w[pages:read entries:read globals:read])
+      expect(json.dig("data", "entries")).not_to be_empty
+
+      get "/api/v1/content", headers: auth(%w[pages:read])
+      expect(json.dig("data", "entries")).to eq([])
+      expect(json.dig("data", "globals")).to eq([])
+    ensure
+      ActionController::Base.perform_caching = caching
+    end
   end
 end
