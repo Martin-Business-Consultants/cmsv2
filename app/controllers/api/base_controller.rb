@@ -4,6 +4,8 @@ class Api::BaseController < ApplicationController
   # Opt-in agent envelope: {status, summary, data, breadcrumbs} when the caller
   # asks for it, and the exact previous shape when it doesn't.
   include Api::AgentEnvelope
+  # Every error as JSON, one shape (before the rescue_froms below, which win).
+  include Api::ErrorResponses
 
   # JSON API: don't redirect to sign-in on auth failure, don't expect CSRF
   # tokens, render structured errors.

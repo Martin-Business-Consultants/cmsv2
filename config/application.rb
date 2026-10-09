@@ -28,6 +28,7 @@ InstalledPlugins.load!
 # Middleware is referenced while the app boots, before the autoloader runs,
 # so it's required here and kept out of autoload_lib below.
 require_relative "../lib/middleware/svg_sandbox"
+require_relative "../lib/middleware/api_exceptions"
 
 module ReactStarterKit
   class Application < Rails::Application
@@ -50,6 +51,10 @@ module ReactStarterKit
     config.active_storage.content_types_to_serve_as_binary -= ["image/svg+xml"]
     config.active_storage.content_types_allowed_inline += ["image/svg+xml"]
     config.middleware.insert_before 0, SvgSandbox
+
+    # An /api request that fails before a controller answers (no route, an
+    # error outside an action) gets the API's JSON error, not an HTML page.
+    config.exceptions_app = ApiExceptions.new
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
