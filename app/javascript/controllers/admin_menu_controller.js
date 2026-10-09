@@ -12,8 +12,8 @@ import { Controller } from "@hotwired/stimulus"
 // one opens at once when none is, stays open CLOSE_DELAY after the pointer
 // leaves it, and gives way to another item's after SWITCH_DELAY, so passing
 // over an item on the way doesn't take over.
-const CLOSE_DELAY = 300
-const SWITCH_DELAY = 150
+const CLOSE_DELAY = 400
+const SWITCH_DELAY = 300
 
 export default class extends Controller {
   static targets = [ "foldToggle", "drawerToggle" ]
