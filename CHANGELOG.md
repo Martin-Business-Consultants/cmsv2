@@ -8,6 +8,19 @@ out.
 
 ## Unreleased
 
+### Changed
+- **A plugin's stylesheet loads only where the plugin shows something**: its
+  own pages, the pages rendering one of its slots (Media's picker in the
+  page and entry editors), and every page when it's in the admin bar.
+  Turbo adds and drops them as pages change.
+
+### Fixed
+- **A plugin's stylesheet that hasn't been compiled no longer fails every
+  admin page** (a 500 on Old Mill Brew's /pages, from Special Builder's):
+  the admin renders without that plugin's styles and reports it, and a
+  failure compiling an installed plugin's assets at boot is logged with
+  what went wrong.
+
 ## 1.5.1
 
 ### Fixed

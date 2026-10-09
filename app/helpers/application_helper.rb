@@ -8,23 +8,47 @@ module ApplicationHelper
   end
 
   # Herb compiles stylesheet_link_tag into a single <link>, which skips
-  # Propshaft's :app expansion, so the layout calls this instead.
-  # Enabled plugins' stylesheets get their own tag: Propshaft's :app
-  # expansion only covers the app's own. Litewind (vendor/assets, Tailwind's
-  # utilities with no build step) comes first: its @layer statement sets the
-  # order the app's layers join (_global.css).
+  # Propshaft's :app expansion, so the layout calls this instead. Litewind
+  # (vendor/assets, Tailwind's utilities with no build step) comes first: its
+  # @layer statement sets the order the app's layers join (_global.css).
+  #
+  # A plugin's stylesheets load only where it shows something
+  # (page_plugins), each in its own tag, which Turbo adds and drops as pages
+  # change (data-turbo-track="dynamic"). One that can't be found (a plugin
+  # installed after the image was built, whose assets haven't compiled yet)
+  # is left out and reported: the page without that plugin's styles, rather
+  # than a page that fails.
   def app_stylesheet_tags
-    plugin_sheets = Cms::Plugins.enabled_stylesheets
     safe_join([
       stylesheet_link_tag(LITEWIND_STYLESHEET, "data-turbo-track": "reload"),
       stylesheet_link_tag(:app, "data-turbo-track": "reload"),
-      (stylesheet_link_tag(*plugin_sheets, "data-turbo-track": "reload") if plugin_sheets.any?)
-    ].compact, "\n")
+      *Cms::Plugins.enabled_stylesheets(page_plugins).filter_map { plugin_stylesheet_tag(it) }
+    ], "\n")
   end
 
-  # What enabled plugins registered for a slot in this view.
+  # The plugins this page shows something of: the one whose page it is
+  # (PluginGated's `plugin :key`, or the plugin whose engine holds the
+  # controller, for one that isn't gated, as Media's file manager), those
+  # whose slots it renders (plugin_slots, all rendered by the time the
+  # layout's <head> is), and those in the admin bar, which is on every page.
+  def page_plugins
+    owner = (controller.plugin_key if controller.respond_to?(:plugin_key)) || Cms::Plugins.owner_of(controller.class)
+    [owner, *@plugins_on_page, *Cms::Plugins.enabled_slots(:nav_actions).keys].compact.uniq
+  end
+
+  def plugin_stylesheet_tag(name)
+    stylesheet_link_tag(name, "data-turbo-track": "dynamic")
+  rescue Propshaft::MissingAssetError => error
+    Rails.error.report(error, handled: true, context: {plugin_stylesheet: name})
+    nil
+  end
+
+  # What enabled plugins registered for a slot in this view, noting them so
+  # the page loads their stylesheets (page_plugins).
   def plugin_slots(name, **locals)
-    safe_join(Cms::Plugins.enabled_slots(name).values.map { |partial| render(partial, **locals) })
+    slots = Cms::Plugins.enabled_slots(name)
+    (@plugins_on_page ||= []).concat(slots.keys)
+    safe_join(slots.values.map { |partial| render(partial, **locals) })
   end
 
   # The core's version, for Settings and the footer of the Settings index.

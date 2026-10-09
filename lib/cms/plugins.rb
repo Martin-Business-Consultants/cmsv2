@@ -510,7 +510,17 @@ module Cms
       def enabled_submenu_items = submenu_items.select { |key, _| enabled?(key) }.values.flatten
       def enabled_new_items = new_items.select { |key, _| enabled?(key) }.values.flatten
       def enabled_settings_pages = settings_pages.select { |key, _| enabled?(key) }
-      def enabled_stylesheets = stylesheets.select { |key, _| enabled?(key) }.values.flatten
+      # The plugin whose engine holds a class (a controller), by the engine's
+      # namespace (Media::Engine is :media), or nil for the core's.
+      def owner_of(klass)
+        path = Object.const_source_location(klass.name)&.first.to_s
+        engine = Rails::Engine.subclasses.find { path.start_with?("#{it.root}/") && !it.is_a?(Rails::Application) }
+        key = engine&.module_parent_name&.underscore&.to_sym
+        key if key && manifests.key?(key)
+      end
+
+      # The stylesheets of those of these plugins that are on.
+      def enabled_stylesheets(keys = stylesheets.keys) = keys.map(&:to_sym).uniq.select { enabled?(it) }.flat_map { stylesheets[it] }
       def enabled_nightly_tasks = nightly_tasks.select { |key, _| enabled?(key) }
       def enabled_bootstrap_tasks = bootstrap_tasks.select { |key, _| enabled?(key) }
 

@@ -21,8 +21,10 @@ Rails.application.config.after_initialize do
 
     begin
       assets.processor.process if missing
-    rescue SystemCallError => error
-      Rails.logger.warn "[plugins] couldn't compile plugin assets: #{error.message}"
+    rescue => error
+      # Logged, never fatal: the admin leaves out a stylesheet it can't find
+      # (ApplicationHelper#app_stylesheet_tags).
+      Rails.logger.warn "[plugins] couldn't compile plugin assets: #{error.class}: #{error.message}"
     end
   end
 end
