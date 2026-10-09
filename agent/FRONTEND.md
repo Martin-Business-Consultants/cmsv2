@@ -16,13 +16,11 @@ This section of AGENTS.md is written by the integration (`cms()` in
 `astro.config`) on every `astro dev` and `astro build`, between its markers.
 Edit outside them; inside, your changes are replaced.
 
-## The packages
+## The integration
 
 | Package | What it gives the site |
 |---|---|
-| `@librepublish/astro` | The `cms()` integration; content loaders (`/loaders`); live loaders (`/live`); a typed client, `linkHref` and the types (`/client`); `<Blocks>`, `<Image>`, `<Seo>` (`/components/*.astro`). |
-| `@librepublish/astro-forms` | `<Form slug>` (`/components/Form.astro`), `getForm`/`getForms` (`/runtime`), and `cmsForms()` for form emails in the site's design. With the CMS's Forms plugin. |
-| `@librepublish/astro-commerce` | `<QuoteRequest items>` (`/components/QuoteRequest.astro`). With the CMS's Commerce plugin. |
+| `@librepublish/astro` | The `cms()` integration; content loaders (`/loaders`); live loaders and `cacheHint` (`/live`); a typed client, `linkHref`, `routeParam` and the types (`/client`); forms — `getForm`/`getForms` and the form email helpers (`/forms`); quotes — `commerceEnabled` (`/commerce`); `<Blocks>`, `<Image>`, `<Seo>`, `<Form>`, `<QuoteRequest>` (`/components/*.astro`). Forms and Media, the CMS's default plugins, are part of it, and Commerce for a site that sells by quote. Source: github.com/Martin-Business-Consultants/libre-cms-astro. |
 
 Env: `CMS_BASE_URL` (the CMS's origin) and `CMS_API_TOKEN` (the site's
 read-only *service token*, Settings › Service tokens). Never commit either.
@@ -69,9 +67,13 @@ locale other than the default is under that locale's prefix (`/fr/…`).
 ```astro
 ---
 // src/pages/[...path].astro
+import { getCollection } from "astro:content";
+import { routeParam } from "@librepublish/astro/client";
 export async function getStaticPaths() {
   return (await getCollection("pages")).map(({ data }) => ({
-    params: { path: data.url.replace(/^\/+/, "") || undefined },
+    // routeParam (@librepublish/astro/client): the url as a [...path] param,
+    // and an absolute SEO canonical back to the path it's served at.
+    params: { path: routeParam(data, { site: import.meta.env.SITE }) },
     props: { page: data },
   }));
 }
@@ -114,14 +116,16 @@ export async function getStaticPaths() {
 
 ## Forms and quotes
 
-- **Forms** (with the Forms plugin) — `<Form slug="contact" />` renders a
+- **Forms** (the Forms plugin, on by default) — `<Form slug="contact" />`
+  (`@librepublish/astro/components/Form.astro`) renders a
   form's fields, a honeypot and Cloudflare Turnstile (when the CMS has it set
   up), and the browser posts straight to the CMS. Never proxy submissions
   through the site.
-- **Form emails** — `cmsForms()` and a route at
-  `src/pages/emails/[form]/[kind].astro` (helpers: `emailTemplatePaths`,
-  `digestMeta`, `answersRow`) give each form's emails the site's design; the
-  CMS sends them.
+- **Form emails** — a route at `src/pages/emails/[form]/[kind].astro`
+  (helpers from `@librepublish/astro/forms`: `emailTemplatePaths`,
+  `digestMeta`, `answersRow`) gives each form's emails the site's design;
+  `cms()` sends the templates here after each build, and the CMS sends the
+  emails.
 - **Quotes** (with the Commerce plugin) — `<QuoteRequest items={[…]} />` on
   a product page posts a quote request straight to the CMS.
 

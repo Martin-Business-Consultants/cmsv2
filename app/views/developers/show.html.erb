@@ -36,7 +36,7 @@
     </div>
 
     <%= postbox "developers-astro", "Connect an Astro site" do %>
-      <p class="text-gray-700">Run this in the site's project (its root or its <code class="<%= inline_code_classes %>">src/</code>). It installs the <code class="<%= inline_code_classes %>">@librepublish/astro</code> packages and gets the site a read-only token of its own, approved in your browser.</p>
+      <p class="text-gray-700">Run this in the site's project (its root or its <code class="<%= inline_code_classes %>">src/</code>). It installs the <code class="<%= inline_code_classes %>">@librepublish/astro</code> integration and gets the site a read-only token of its own, approved in your browser.</p>
       <div class="flex items-center gap-2">
         <code class="<%= code_classes %> min-w-0 flex-1">curl -fsSL <%= cms_url %>/frontend/install.sh | sh</code>
         <%= copy_button "curl -fsSL #{cms_url}/frontend/install.sh | sh" %>
@@ -52,13 +52,12 @@
       <details class="rounded-lg border border-gray-200">
         <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-900">Or by hand</summary>
         <div class="space-y-2 border-t border-gray-200 p-3">
-          <pre class="<%= code_classes %>">npm install @librepublish/astro @librepublish/astro-forms</pre>
+          <pre class="<%= code_classes %>">npm install @librepublish/astro@github:Martin-Business-Consultants/libre-cms-astro</pre>
           <pre class="<%= code_classes %>">// astro.config.mjs
 import cms from "@librepublish/astro";
-import { cmsForms } from "@librepublish/astro-forms";
-export default defineConfig({ integrations: [cms(), cmsForms()] });</pre>
+export default defineConfig({ integrations: [cms()] });</pre>
           <code class="<%= code_classes %>">CMS_BASE_URL=<%= cms_url %>  CMS_API_TOKEN=&lt;a service token&gt;</code>
-          <p class="<%= ui(:help) %>">The packages: github.com/Martin-Business-Consultants/cms-astro.</p>
+          <p class="<%= ui(:help) %>">Forms, Media and Commerce come with it. The source: github.com/Martin-Business-Consultants/libre-cms-astro.</p>
         </div>
       </details>
     <% end %>

@@ -4,8 +4,8 @@ A headless CMS built on Rails: an admin that edits like WordPress, a JSON API
 that does everything the admin does, a `cms` CLI and MCP surface for AI
 agents, and plugins. One install is one site, in one container, with SQLite
 for everything. Sites render the content with any frontend, starting with
-Astro: the `@librepublish/astro` packages
-([cms-astro](https://github.com/Martin-Business-Consultants/cms-astro)) read
+Astro: the `@librepublish/astro` integration
+([libre-cms-astro](https://github.com/Martin-Business-Consultants/libre-cms-astro)) reads
 the delivery API (`/api/v1`, docs/delivery-api.md).
 
 ```sh

@@ -5,21 +5,19 @@
 #
 # Run it in an Astro project (its root, or its src/ directory). It:
 #
-#   package.json   adds @librepublish/astro, and @librepublish/astro-forms and
-#                  @librepublish/astro-commerce when the CMS has Forms and
-#                  Commerce switched on (npm, pnpm, yarn or bun: whichever the
-#                  project uses)
+#   package.json   adds @librepublish/astro — Forms and Media, the CMS's default
+#                  plugins, are part of it, and Commerce's <QuoteRequest> (npm,
+#                  pnpm, yarn or bun: whichever the project uses)
 #   .env           CMS_BASE_URL and CMS_API_TOKEN (kept out of git)
 #
 # and prints what to add to astro.config if cms() isn't there yet. The
-# packages live at github.com/Martin-Business-Consultants/cms-astro.
+# integration lives at github.com/Martin-Business-Consultants/libre-cms-astro
+# and installs from there (LIBREPUBLISH_ASTRO=… installs another source, e.g.
+# a tag: github:Martin-Business-Consultants/libre-cms-astro#v0.1.1).
 #
 # The token is the site's own read-only service token, approved in your
 # browser — nobody copies one out of a settings page. For CI, pass one
 # instead: CMS_API_TOKEN=mbc_… sh -c "$(curl -fsSL __CMS_URL__/frontend/install.sh)"
-#
-#   --forms / --no-forms         add (or leave out) @librepublish/astro-forms
-#   --commerce / --no-commerce   add (or leave out) @librepublish/astro-commerce
 #
 # Then `npx astro dev` writes AGENTS.md (how this site works with the CMS,
 # and the Site health checks it's held to). Re-running is safe: it updates
@@ -30,14 +28,12 @@ CMS_URL="${CMS_URL:-__CMS_URL__}"
 CMS_URL="${CMS_URL%/}"
 SITE="__SITE__"
 
-FORMS=""
-COMMERCE=""
+ASTRO="${LIBREPUBLISH_ASTRO:-github:Martin-Business-Consultants/libre-cms-astro}"
+
 for arg in "$@"; do
   case "$arg" in
-    --forms) FORMS=yes ;;
-    --no-forms) FORMS=no ;;
-    --commerce) COMMERCE=yes ;;
-    --no-commerce) COMMERCE=no ;;
+    # Commerce is part of @librepublish/astro now; kept so old commands still run.
+    --commerce|--no-commerce|--forms|--no-forms) ;;
     *) printf 'install: unknown option %s\n' "$arg" >&2; exit 1 ;;
   esac
 done
@@ -117,13 +113,9 @@ else
     CMS_API_TOKEN=mbc_… sh -c \"\$(curl -fsSL $CMS_URL/frontend/install.sh)\""
 fi
 
-# The delivery API the site reads (/api/v1): it also says which plugins are on.
-site_json="$(curl -sS -w '\n%{http_code}' -H "Authorization: Bearer $token" "$CMS_URL/api/v1/site")"
-check="$(printf '%s' "$site_json" | tail -n 1)"
+# The delivery API the site reads (/api/v1), to check the token works.
+check="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "$CMS_URL/api/v1/site")"
 [ "$check" = "200" ] || die "the CMS refused that token ($check)"
-plugins="$(printf '%s' "$site_json" | sed '$d' | json data.plugins)"
-case ",$plugins," in *,forms,*) [ -z "$FORMS" ] && FORMS=yes ;; esac
-case ",$plugins," in *,commerce,*) [ -z "$COMMERCE" ] && COMMERCE=yes ;; esac
 
 env_file="$ROOT/.env"
 touch "$env_file"
@@ -138,9 +130,7 @@ say "  ✓ .env (CMS_BASE_URL, CMS_API_TOKEN) — kept out of git"
 
 # ── 3. Packages ─────────────────────────────────────────────────────────────
 step "Packages"
-packages="@librepublish/astro"
-[ "$FORMS" = "yes" ] && packages="$packages @librepublish/astro-forms"
-[ "$COMMERCE" = "yes" ] && packages="$packages @librepublish/astro-commerce"
+packages="@librepublish/astro@$ASTRO"
 
 if [ -f "$ROOT/pnpm-lock.yaml" ]; then add="pnpm add"
 elif [ -f "$ROOT/yarn.lock" ]; then add="yarn add"
@@ -158,13 +148,11 @@ else
   say "  Add the integration to $(basename "$CONFIG"):"
   say ""
   say '      import cms from "@librepublish/astro";'
-  [ "$FORMS" = "yes" ] && say '      import { cmsForms } from "@librepublish/astro-forms";'
   say ""
-  if [ "$FORMS" = "yes" ]; then
-    say '      export default defineConfig({ integrations: [cms(), cmsForms()] });'
-  else
-    say '      export default defineConfig({ integrations: [cms()] });'
-  fi
+  say '      export default defineConfig({ integrations: [cms()] });'
+  say ""
+  say "  Forms, Media and Commerce come with it: <Form slug>, <Image> and"
+  say '  <QuoteRequest items> from "@librepublish/astro/components/*.astro".'
   say ""
   say "  On Cloudflare, with pages rendered on demand, add the adapter too:"
   say '      import cloudflare from "@astrojs/cloudflare";'

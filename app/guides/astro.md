@@ -16,21 +16,20 @@ In the site's project (its root or its `src/`):
 curl -fsSL {{cms_url}}/frontend/install.sh | sh
 ```
 
-It installs `@librepublish/astro` — and `@librepublish/astro-forms` and
-`@librepublish/astro-commerce` when Forms and Commerce are on here — gets the
-site a **read-only service token of its own** (you approve it in your
-browser, signed in here), and writes it to `.env` with the CMS's address.
+It installs `@librepublish/astro` — Forms and Media, this CMS's default
+plugins, are part of it, and Commerce's quotes — gets the site a
+**read-only service token of its own** (you approve it in your browser,
+signed in here), and writes it to `.env` with the CMS's address.
 Then add the integration to `astro.config.mjs`:
 
 ```js
 import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import cms from "@librepublish/astro";
-import { cmsForms } from "@librepublish/astro-forms";   // with Forms
 
 export default defineConfig({
   adapter: cloudflare({ prerenderEnvironment: "node" }), // to render pages on demand
-  integrations: [cms(), cmsForms()],
+  integrations: [cms()],
 });
 ```
 
@@ -43,8 +42,8 @@ CMS_API_TOKEN=…   # the site's service token
 
 From then on, every `astro dev` and `astro build` writes **`AGENTS.md`** into
 the site's repo — how the site works with this CMS, and the Site health
-checks it's held to, for an AI working there. Commit it. The packages and
-their source are at github.com/Martin-Business-Consultants/cms-astro.
+checks it's held to, for an AI working there. Commit it. The integration's
+source is at github.com/Martin-Business-Consultants/libre-cms-astro.
 
 ## Load content
 
@@ -74,9 +73,12 @@ its locale's prefix (`/fr/a-propos`).
 ```astro
 ---
 import { getCollection } from "astro:content";
+import { routeParam } from "@librepublish/astro/client";
 export async function getStaticPaths() {
   return (await getCollection("pages")).map(({ data }) => ({
-    params: { path: data.url.replace(/^\/+/, "") || undefined },
+    // routeParam (@librepublish/astro/client): the url as a [...path] param,
+    // and an absolute SEO canonical back to the path it's served at.
+    params: { path: routeParam(data, { site: import.meta.env.SITE }) },
     props: { page: data },
   }));
 }
@@ -106,16 +108,18 @@ import Prose from "../components/blocks/Prose.astro";
 
 ## Forms and quotes
 
-- **Forms**, with the Forms plugin — `<Form slug="contact" />` from
-  `@librepublish/astro-forms`. The browser posts straight here, with
-  Cloudflare Turnstile when Settings › Forms has it, so Settings › General's
+- **Forms**, with the Forms plugin (on by default) — `<Form slug="contact" />`
+  from `@librepublish/astro/components/Form.astro`. The browser posts
+  straight here, with Cloudflare Turnstile when Settings › Forms has it, so Settings › General's
   site URL (and any other origins) must be right.
-- **Form emails**, likewise — `cmsForms()` and a route at
-  `src/pages/emails/[form]/[kind].astro` give each form's emails the site's
-  design; until a build sends a template for an email's current blocks, it
-  goes out in the CMS's own layout.
+- **Form emails**, likewise — a route at
+  `src/pages/emails/[form]/[kind].astro` (helpers from
+  `@librepublish/astro/forms`) gives each form's emails the site's design,
+  and `cms()` sends the templates here after each build. Until a build sends
+  a template for an email's current blocks, it goes out in the CMS's own
+  layout.
 - **Quotes**, with Commerce — `<QuoteRequest items={[…]} />` from
-  `@librepublish/astro-commerce`.
+  `@librepublish/astro/components/QuoteRequest.astro`.
 
 ## Builds
 

@@ -28,11 +28,11 @@ class AgentBootstrapsController < ApplicationController
     agents_md: {path: "AGENTS.md",            type: "text/markdown"},
     skill:     {path: "skills/cms/SKILL.md",  type: "text/markdown"},
     # Not the installer's: the site repo's AGENTS.md, written by the Astro
-    # integration (@librepublish/astro, github.com/Martin-Business-Consultants/cms-astro)
+    # integration (@librepublish/astro, github.com/Martin-Business-Consultants/libre-cms-astro)
     # so an agent there knows how the site works with this CMS.
     frontend_md: {path: "FRONTEND.md",        type: "text/markdown"},
     # The Astro installer: run in a site's project, it installs the
-    # @librepublish/astro packages and gets the site a token.
+    # @librepublish/astro integration and gets the site a token.
     frontend_install: {path: "frontend-install.sh", type: "text/x-shellscript"}
   }.freeze
 

@@ -65,9 +65,9 @@ RSpec.describe "Headless", type: :request do
     expect(response.body).not_to include("__CMS_URL__", "librepublish:cms-frontend")
   end
 
-  it "serves the Astro installer, which installs the packages rather than copying files" do
+  it "serves the Astro installer, which installs the integration rather than copying files" do
     get "/frontend/install.sh"
-    expect(response.body).to include("http://www.example.com", "@librepublish/astro", "@librepublish/astro-forms", "purpose=site", "/api/v1/site")
+    expect(response.body).to include("http://www.example.com", "@librepublish/astro", "github:Martin-Business-Consultants/libre-cms-astro", "purpose=site", "/api/v1/site")
     expect(response.body).not_to include("__CMS_URL__", "/frontend/files/")
 
     get "/frontend/files/integration.ts"

@@ -166,7 +166,7 @@ same device login as `cms login`, with `purpose=site`: approving it (which
 takes `settings:write`) issues the site a read-only service token on the
 Production site role instead of handing over the approver's own. The site
 then builds with the `cms()` integration (`@librepublish/astro`, from
-github.com/Martin-Business-Consultants/cms-astro), which writes the frontend
+github.com/Martin-Business-Consultants/libre-cms-astro), which writes the frontend
 AGENTS.md — with Site health's checks for the site — into its repo and reports
 each build
 (`GET /api/frontend`, `cms frontend`).
