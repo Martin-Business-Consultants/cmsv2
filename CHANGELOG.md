@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.4.0
+
 ### Added
 - **A Docker install updates itself from Settings › Updates**, as Runwell
   and WordPress do, with nothing to set up: Update downloads the release's
