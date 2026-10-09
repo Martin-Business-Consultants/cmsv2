@@ -117,6 +117,51 @@ RSpec.describe Deploys do
       expect(Setting.get("deploy")["log"].first).to include("via" => "github", "changes" => 1)
     end
 
+    describe "when it fires" do
+      before do
+        Setting.set("github", {"token" => "ghp_secret", "frontend_github_repo" => "acme/acme-site"})
+        Setting.set("deploy", {"provider" => "github"})
+        Frontend.record_build("render" => "static")
+      end
+
+      it "keeps the changes for the next deploy when the build fails" do
+        http_stub(Net::HTTPInternalServerError.new("1.1", "500", "Internal Server Error"))
+
+        described_class.schedule_later(reason: "page.updated", subject: page)
+        described_class.trigger_now(Setting.get("deploy")["scheduled_at"], "page.updated")
+
+        expect(Setting.get("deploy")["last_status"]).to eq("failure")
+        expect(Setting.get("deploy")["pending_changes"]).to include(Deploys::Change.from("page.updated", page))
+      end
+
+      it "fires once when its job runs twice" do
+        http = http_stub(Net::HTTPNoContent.new("1.1", "204", "No Content"))
+
+        described_class.schedule_later(reason: "page.updated", subject: page)
+        scheduled_at = Setting.get("deploy")["scheduled_at"]
+        2.times { described_class.trigger_now(scheduled_at, "page.updated") }
+
+        expect(http).to have_received(:request).once
+      end
+
+      it "leaves what changed while it fired, and the schedule that brought it, for the next deploy" do
+        team = Page.create!(slug: "team", title: "Team", status: "draft", locale: "en")
+        http = http_stub(Net::HTTPNoContent.new("1.1", "204", "No Content"))
+        allow(http).to receive(:request) do
+          described_class.schedule_later(reason: "page.published", subject: team)
+          Net::HTTPNoContent.new("1.1", "204", "No Content")
+        end
+
+        described_class.schedule_later(reason: "page.updated", subject: page)
+        described_class.trigger_now(Setting.get("deploy")["scheduled_at"], "page.updated")
+
+        deploy = Setting.get("deploy")
+        expect(deploy["pending_changes"]).to eq([Deploys::Change.from("page.published", team)])
+        expect(deploy["scheduled_at"]).to be_present
+        expect(deploy["last_status"]).to eq("success")
+      end
+    end
+
     it "purges a site rendered on demand instead of rebuilding it, signed with its secret" do
       Setting.set("deploy", {"provider" => "build_hook", "url" => "https://build.example/hook"})
       Frontend.record_build("render" => "server", "webhook_url" => "https://acme.test/_cms/webhook")

@@ -20,6 +20,27 @@ RSpec.describe Setting do
     end
   end
 
+  describe ".set with a block" do
+    it "merges what the block makes of the data as it is now" do
+      Setting.set("deploy", {"pending_changes" => [1], "paused" => false})
+
+      Setting.set("deploy") { |data| {"pending_changes" => data["pending_changes"] + [2]} }
+
+      expect(Setting.get("deploy")).to eq("pending_changes" => [1, 2], "paused" => false)
+    end
+
+    it "reads past a copy of the row loaded before another write" do
+      Setting.set("deploy", {"pending_changes" => [1]})
+      stale = Setting.find_by!(key: "deploy")
+      Setting.set("deploy") { |data| {"pending_changes" => data["pending_changes"] + [2]} }
+
+      Setting.set("deploy") { |data| {"pending_changes" => data["pending_changes"] + [3]} }
+
+      expect(Setting.get("deploy")["pending_changes"]).to eq([1, 2, 3])
+      expect(stale.data["pending_changes"]).to eq([1])
+    end
+  end
+
   describe ".delete_key" do
     it "removes the row" do
       described_class.set("scratch", a: 1)

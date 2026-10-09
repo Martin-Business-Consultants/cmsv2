@@ -6,7 +6,7 @@
 # never sees: integration tokens, feature flags, default locale, etc.
 #
 # Stored as a thin key/value model: `Setting.get("github")` returns a hash;
-# `Setting.set("github", token: "ghp_…")` deep-merges into the value.
+# `Setting.set("github", token: "ghp_…")` merges into the value.
 class Setting < ApplicationRecord
   include Eventable
   include Redactable
@@ -39,17 +39,38 @@ class Setting < ApplicationRecord
     find_by(key: key.to_s)&.data || {}
   end
 
-  def self.set(key, attrs)
-    record = find_or_initialize_by(key: key.to_s)
-    record.data = (record.data || {}).merge(attrs.deep_stringify_keys)
-    record.save!
-    record
+  # Merges `attrs` into the setting's data. Given a block instead, merges what
+  # the block returns for the data as it is now — for a value worked out from
+  # the current one (appending to a list), so two writers at once don't each
+  # overwrite the other's change:
+  #
+  #   Setting.set("deploy") { |data| {"pending_changes" => Array(data["pending_changes"]) + [change]} }
+  def self.set(key, attrs = nil)
+    changing(key) do |record|
+      data = record.data || {}
+      record.data = data.merge((block_given? ? yield(data) : attrs).to_h.deep_stringify_keys)
+    end
   end
 
   # Drops names from a setting's data (a value that has moved to `secrets`).
   def self.unset(key, *names)
-    record = find_by(key: key.to_s) or return
-    record.update!(data: (record.data || {}).except(*names.map(&:to_s)))
+    return unless exists?(key: key.to_s)
+
+    changing(key) { |record| record.data = (record.data || {}).except(*names.map(&:to_s)) }
+  end
+
+  # Reads the row and writes it back in one transaction, the row re-read
+  # under its lock (on SQLite the transaction is IMMEDIATE: it holds the
+  # write lock from the start), so a read-modify-write can't lose another
+  # one's change made in between.
+  def self.changing(key)
+    transaction do
+      record = find_or_initialize_by(key: key.to_s)
+      record.lock! if record.persisted?
+      yield record
+      record.save!
+      record
+    end
   end
 
   def self.delete_key(key)
@@ -69,13 +90,12 @@ class Setting < ApplicationRecord
   # string: forms send "" for an untouched password field, and a stored ""
   # would read as "configured" everywhere that checks `.present?`.
   def self.set_secret(key, attrs)
-    record = find_or_initialize_by(key: key.to_s)
-    record.forget_unreadable(:secrets) if record.persisted?
-    merged = record.secrets_hash.merge(attrs.deep_stringify_keys)
-    merged = merged.reject { |_, value| value.to_s.strip.empty? }
-    record.secrets = merged.empty? ? nil : JSON.generate(merged)
-    record.save!
-    record
+    changing(key) do |record|
+      record.forget_unreadable(:secrets) if record.persisted?
+      merged = record.secrets_hash.merge(attrs.deep_stringify_keys)
+      merged = merged.reject { |_, value| value.to_s.strip.empty? }
+      record.secrets = merged.empty? ? nil : JSON.generate(merged)
+    end
   end
 
   def secrets_hash

@@ -20,7 +20,7 @@ module Hello
 
     # page.published.cms, counted in the plugin's setting.
     def self.record_publication
-      Setting.set("hello", {"pages_published" => Setting.get("hello")["pages_published"].to_i + 1})
+      Setting.set("hello") { |data| {"pages_published" => data["pages_published"].to_i + 1} }
     end
   end
 end

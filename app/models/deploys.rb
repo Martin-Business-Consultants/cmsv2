@@ -82,8 +82,8 @@ module Deploys
     return unless ready?(settings)
     return if paused?(settings)
 
-    pending = Array(settings["pending_changes"]) + [Deploys::Change.from(reason, subject)]
-    Setting.set(SETTING_KEY, {"pending_changes" => pending.last(MAX_PENDING)})
+    change = Deploys::Change.from(reason, subject)
+    Setting.set(SETTING_KEY) { |data| {"pending_changes" => (Array(data["pending_changes"]) + [change]).last(MAX_PENDING)} }
     scheduled_at = stamp_schedule(reason)
     Deploys::TriggerJob.set(wait: DEBOUNCE_WINDOW).perform_later(scheduled_at, reason)
   end
@@ -99,12 +99,22 @@ module Deploys
   # Fires the build or the purge (or both, for a hybrid site) unless a newer
   # schedule superseded this one, with the window's changes, and logs each
   # attempt. "Deploy now" (reason "manual") rebuilds, and purges everything.
+  #
+  # The schedule is claimed first, in one write, so a job run twice fires
+  # once. The changes it fires with leave `pending_changes` only once every
+  # attempt succeeded: after a failure they stay, and the next deploy carries
+  # them. Changes made while it fires are left for the next one either way.
   def trigger_now(scheduled_at, reason)
-    settings = config
-    return if settings["scheduled_at"] != scheduled_at
+    claimed = nil
+    Setting.set(SETTING_KEY) do |data|
+      claimed = data["scheduled_at"] == scheduled_at ? data : nil
+      claimed ? {"scheduled_at" => nil} : {}
+    end
+    return unless claimed
 
-    changes = Deploys::Change.merge(Array(settings["pending_changes"]))
-    Setting.set(SETTING_KEY, {"pending_changes" => []})
+    settings = claimed
+    taken = Array(settings["pending_changes"])
+    changes = Deploys::Change.merge(taken)
     provider = current(settings)
     manual = reason == "manual"
     actions = []
@@ -113,8 +123,9 @@ module Deploys
 
     if actions.empty? || paused?(settings)
       record_attempt(status: "disabled", reason: reason, http_status: nil, error: nil, changes: changes.size)
+      settle(taken)
     else
-      actions.each do |action|
+      attempts = actions.map do |action|
         started = monotonic_ms
         attempt = if action == :purge
           Deploys::Purge.fire(reason: reason, changes: changes, all: manual)
@@ -123,8 +134,18 @@ module Deploys
         end
         record_attempt(status: attempt.status, reason: reason, http_status: attempt.http_status, error: attempt.error,
           duration_ms: monotonic_ms - started, via: action == :purge ? "purge" : provider.key, changes: changes.size)
+        attempt
       end
+      settle(taken) if attempts.all? { it.status == "success" }
     end
+  end
+
+  # Takes the changes a deploy went out with off `pending_changes`, leaving
+  # any that arrived since.
+  def settle(taken)
+    return if taken.empty?
+
+    Setting.set(SETTING_KEY) { |data| {"pending_changes" => Array(data["pending_changes"]) - taken} }
   end
 
   # A plugin's provider may predate `changes:`; it's told only what it takes.
@@ -141,8 +162,7 @@ module Deploys
   end
 
   def record_attempt(status:, reason:, http_status:, error:, duration_ms: nil, via: nil, changes: nil)
-    log = Array(config["log"])
-    log.unshift({
+    entry = {
       "at"          => Time.current.iso8601,
       "status"      => status,
       "reason"      => reason,
@@ -151,14 +171,17 @@ module Deploys
       "http_status" => http_status,
       "error"       => error,
       "duration_ms" => duration_ms
-    }.compact)
+    }.compact
 
-    Setting.set(SETTING_KEY, {
-      "log"           => log.first(MAX_LOG_SIZE),
-      "last_status"   => status,
-      "last_fired_at" => Time.current.iso8601,
-      "scheduled_at"  => nil
-    })
+    # `scheduled_at` is left alone: trigger_now cleared it when it claimed
+    # the schedule, and anything there now is a newer one, still to fire.
+    Setting.set(SETTING_KEY) do |data|
+      {
+        "log"           => [entry, *Array(data["log"])].first(MAX_LOG_SIZE),
+        "last_status"   => status,
+        "last_fired_at" => Time.current.iso8601
+      }
+    end
   end
 
   def monotonic_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1000).to_i
