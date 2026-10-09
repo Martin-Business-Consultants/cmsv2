@@ -143,6 +143,10 @@ out.
   runs their specs, and every gem in the Gemfile is held to its tested major
   version. `bin/rake` with no task checks style and runs the specs, where it
   used to rewrite files with RuboCop's corrections.
+- **A bulk upload can't exhaust the server's memory.** Media (now pinned at
+  09d97f7) streams each image out of the zip, refusing one past 50 MB
+  unpacked or 100 megapixels, and stops an archive at 2 GB unpacked or
+  2,000 images; it used to read every image into memory first.
 
 ## 1.5.4
 
