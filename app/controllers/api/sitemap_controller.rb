@@ -5,6 +5,8 @@
 # data the public XML serves, minus the search-engine framing. The admin
 # tree and its per-row patch are Api::SitemapEntriesController.
 class Api::SitemapController < Api::BaseController
+  requires_capability "pages:read", only: :show
+
   def show
     @sitemap = Sitemap.new
     @entries = @sitemap.entries

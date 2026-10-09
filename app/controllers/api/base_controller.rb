@@ -8,12 +8,20 @@ class Api::BaseController < ApplicationController
   # JSON API: don't redirect to sign-in on auth failure, don't expect CSRF
   # tokens, render structured errors.
   #
-  # Authorization defaults to "skip" so existing endpoints keep working —
-  # individual controllers opt in by calling `enforce_authorization` and
-  # declaring `requires_capability`. Bearer tokens carry per-token scopes
-  # that the Authorization concern intersects with the underlying user's
-  # role permissions before allowing a request through.
-  skip_authorization
+  # Authorization fails closed: every action declares the capability it
+  # needs (`requires_capability`), or says it's open to any caller
+  # (`skip_authorization only:`), or it's refused. Bearer tokens carry
+  # per-token scopes that the Authorization concern intersects with the
+  # underlying user's role permissions before allowing a request through.
+  #
+  # Plugins' API controllers were written when this defaulted to skip, and
+  # a plugin is its own repository, so a controller defined outside this
+  # app's app/ keeps that default until it calls `enforce_authorization`.
+  def self.inherited(subclass)
+    super
+    subclass._skip_authorization = true unless caller_locations(1, 1).first&.path.to_s.start_with?(Rails.root.join("app/").to_s)
+  end
+
   skip_forgery_protection
   skip_before_action :authenticate, raise: false
 

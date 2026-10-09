@@ -36,6 +36,7 @@ module Authorization
   included do
     class_attribute :_capability_map, default: {}
     class_attribute :_skip_authorization, default: false
+    class_attribute :_skipped_actions, default: []
 
     before_action :authorize_action!
     rescue_from Forbidden, with: :render_forbidden
@@ -52,22 +53,46 @@ module Authorization
       )
     end
 
-    def skip_authorization
-      self._skip_authorization = true
+    # Every action, or with `only:` just those: an action any signed-in
+    # caller may take, like asking who it is.
+    def skip_authorization(only: nil)
+      if only
+        self._skipped_actions = _skipped_actions | Array(only).map(&:to_sym)
+      else
+        self._skip_authorization = true
+      end
     end
 
     # Counterpart to `skip_authorization` — re-enables enforcement on a
-    # subclass whose ancestor opted out. Used by API controllers that opt
-    # into capability checks while their base controller defaults to skip.
+    # subclass whose ancestor opted out.
     def enforce_authorization
       self._skip_authorization = false
+    end
+
+    # Whether `action` is open to any signed-in caller, or gated by a
+    # capability; nil when neither, which `authorize_action!` refuses.
+    def authorization_for(action)
+      return :skipped if _skip_authorization || _skipped_actions.include?(action.to_sym)
+
+      capability_for(action)
+    end
+
+    def capability_for(action)
+      action = action.to_sym
+      _capability_map.each do |capability, opts|
+        next if opts[:only].any? && !opts[:only].include?(action)
+        next if opts[:except].any? && opts[:except].include?(action)
+
+        return capability
+      end
+      nil
     end
   end
 
   private
 
   def authorize_action!
-    return if self.class._skip_authorization
+    return if self.class._skip_authorization || self.class._skipped_actions.include?(action_name.to_sym)
     return unless authentication_required?
 
     capability = capability_for_action(action_name.to_sym)
@@ -88,15 +113,7 @@ module Authorization
     end
   end
 
-  def capability_for_action(action)
-    self.class._capability_map.each do |capability, opts|
-      next if opts[:only].any? && !opts[:only].include?(action)
-      next if opts[:except].any? && opts[:except].include?(action)
-
-      return capability
-    end
-    nil
-  end
+  def capability_for_action(action) = self.class.capability_for(action)
 
   # Override in controllers (or skip_authorization) for actions where there
   # is no concept of "the current user" yet (sign-in, sign-up, public site).

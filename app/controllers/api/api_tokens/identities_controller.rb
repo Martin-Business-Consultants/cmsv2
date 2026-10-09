@@ -5,6 +5,9 @@
 # A service token has no person behind it, so it identifies itself by name
 # and role instead, and `whoami` works for both kinds of credential.
 class Api::ApiTokens::IdentitiesController < Api::BaseController
+  # Any token may ask who it is and what it holds.
+  skip_authorization only: :show
+
   # "51 capabilities" is what the default summary makes of this — true, and not
   # the answer to "who am I". Who, and whether this credential can write, is.
   agent_summary(:show) do |payload|

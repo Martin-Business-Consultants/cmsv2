@@ -4,9 +4,9 @@
 # with the hit counters the edge payload (Api::RedirectsController#index) has
 # no use for.
 class Api::Redirects::RulesController < Api::BaseController
-  def index
-    require_capability!("redirects:read")
+  requires_capability "redirects:read", only: :index
 
+  def index
     @redirects = Redirect.ordered
   end
 end

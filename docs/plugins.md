@@ -97,7 +97,10 @@ data.
 - **Controllers** inherit the core's (`ApplicationController`,
   `Settings::BaseController`, `Api::BaseController`), `include PluginGated`
   and say `plugin :hello`: every action is a 404 while the plugin is off. They
-  declare capabilities with `requires_capability` like core controllers.
+  declare capabilities with `requires_capability` like core controllers. An
+  API controller also says `enforce_authorization`: the core's API refuses
+  an action that declares nothing, but keeps a plugin's open until it opts
+  in, as plugins written before that expect.
 - **Behaviour** lives in the plugin's `app/models`, as in the core
   (STYLE.md): verbs on its records, concerns under `app/models/<model>/`, and
   plain objects for anything without a record (a client for an outside API,

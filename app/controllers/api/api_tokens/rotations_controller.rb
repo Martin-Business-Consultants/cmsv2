@@ -4,6 +4,9 @@
 # has been leaked. The response carries the only copy of the new plaintext,
 # and the token used to make the call is dead by the time it lands.
 class Api::ApiTokens::RotationsController < Api::BaseController
+  # Any token may replace itself: it's the one credential it holds.
+  skip_authorization only: :create
+
   def create
     @token = Current.api_token
     if @token

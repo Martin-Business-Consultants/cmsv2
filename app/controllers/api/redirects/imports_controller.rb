@@ -6,9 +6,9 @@ require "csv"
 # uploaded `file` param, so `cms redirects import < redirects.csv` works as well
 # as a multipart post. Upserts by source path (Redirect::Import).
 class Api::Redirects::ImportsController < Api::BaseController
-  def create
-    require_capability!("redirects:write")
+  requires_capability "redirects:write", only: :create
 
+  def create
     csv = uploaded_csv
     if csv.blank?
       render json: {error: "invalid", message: "No CSV supplied"}, status: :unprocessable_content

@@ -7,17 +7,16 @@
 # page and entry endpoints; this is for "noindex this, bump that one's
 # priority".
 class Api::SitemapEntriesController < Api::BaseController
-  def index
-    require_capability!("pages:read")
+  requires_capability "pages:read",  only: :index
+  requires_capability "pages:write", only: :update
 
+  def index
     sitemap = Sitemap.new
     @all = sitemap.all_entries
     @included = sitemap.entries
   end
 
   def update
-    require_capability!("pages:write")
-
     @record = Sitemap.record_for(params[:source], params[:id])
     return render(json: {error: "not_found"}, status: :not_found) unless @record
 

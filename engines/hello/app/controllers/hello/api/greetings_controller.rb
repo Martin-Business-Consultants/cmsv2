@@ -6,10 +6,10 @@ module Hello
     class GreetingsController < ::Api::BaseController
       include PluginGated
       plugin :hello
+      enforce_authorization
+      requires_capability "hello:read", only: :index
 
       def index
-        require_capability!("hello:read")
-
         @greetings = Greeting.newest_first.limit(50)
       end
     end

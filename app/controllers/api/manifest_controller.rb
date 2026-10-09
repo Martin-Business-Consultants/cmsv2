@@ -3,6 +3,8 @@
 # Introspection endpoint for agents (and humans): the shape of this CMS
 # (Manifest).
 class Api::ManifestController < Api::BaseController
+  requires_capability "pages:read", only: :show
+
   agent_summary(:show) do |payload|
     counts = payload["counts"] or next nil
     parts = counts.select { |_, n| n.to_i.positive? }

@@ -24,6 +24,12 @@
 # not. Everything that writes is gated, checked inline since the actions
 # aren't uniformly permissioned.
 class Api::RedirectsController < Api::BaseController
+  # The rules a site serves: what any visitor can see, so any token reads
+  # them (the site's own builds with whatever it holds).
+  skip_authorization only: :index
+  requires_capability "redirects:write",  only: [:create, :update]
+  requires_capability "redirects:delete", only: :destroy
+
   before_action :set_redirect, only: [:update, :destroy]
 
   def index
@@ -31,24 +37,18 @@ class Api::RedirectsController < Api::BaseController
   end
 
   def create
-    require_capability!("redirects:write")
-
     @redirect = Redirect.create!(redirect_params)
     @redirect.track_event(:created, source: @redirect.source_path)
     render :show, status: :created
   end
 
   def update
-    require_capability!("redirects:write")
-
     @redirect.update!(redirect_params)
     @redirect.track_event(:updated, source: @redirect.source_path)
     render :show
   end
 
   def destroy
-    require_capability!("redirects:delete")
-
     @redirect.track_event(:deleted, source: @redirect.source_path)
     @redirect.destroy!
     head :no_content
