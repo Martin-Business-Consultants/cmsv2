@@ -8,6 +8,19 @@ out.
 
 ## Unreleased
 
+### Fixed
+- **Settings › API token, Service tokens and settings secrets no longer fail
+  on values encrypted with another install's key** (a site moved here
+  without that install's keys). A token it can't read still works, and its
+  page says to rotate it to get one that can be shown; a setting's secret it
+  can't read counts as not set.
+
+### Changed
+- **An install carries only the default plugins, Forms and Media.** The
+  reference plugin (Hello, `engines/hello`) is for working on the core: it's
+  in the development and test bundle only, so it's no longer listed in
+  Settings › Plugins or in an update's bundle.
+
 ### Added
 - **Slugs fill in from the title as it's typed** (the slug Stimulus
   controller): a new page's, entry's, collection's, global's or block

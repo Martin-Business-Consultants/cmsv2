@@ -71,8 +71,9 @@ class Setting < ApplicationRecord
   def secrets_hash
     parsed = JSON.parse(secrets.presence || "{}")
     parsed.is_a?(Hash) ? parsed : {}
-  rescue JSON::ParserError
-    # Unreadable ciphertext means the key that wrote it is gone. Treat it as
+  rescue JSON::ParserError, ActiveRecord::Encryption::Errors::Decryption
+    # Unreadable ciphertext means the key that wrote it is gone (a site moved
+    # from another install without its keys). Treat it as
     # "nothing stored" so the app boots and the settings page says "not set",
     # rather than 500ing on every request that reads a credential.
     {}

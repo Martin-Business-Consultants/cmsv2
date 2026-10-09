@@ -29,11 +29,19 @@ gem "thruster", require: false
 gem "turbo-rails", "~> 2.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
-# Plugins (docs/plugins.md): bundled ones ship with the core in engines/;
-# installed ones live in plugins/, one gem each, put there by
-# `bin/rails "plugins:install[git url]"`.
-Dir.glob(File.expand_path("{engines,plugins}/*/*.gemspec", __dir__)).sort.each do |gemspec|
+# Plugins (docs/plugins.md): installed ones live in plugins/, one gem each,
+# put there by `bin/rails "plugins:install[git url]"` (the defaults, Forms
+# and Media, among them).
+Dir.glob(File.expand_path("plugins/*/*.gemspec", __dir__)).sort.each do |gemspec|
   gem File.basename(gemspec, ".gemspec"), path: File.dirname(gemspec)
+end
+
+# The reference plugin (engines/hello), for working on the core and its
+# specs: no install carries it.
+group :development, :test do
+  Dir.glob(File.expand_path("engines/*/*.gemspec", __dir__)).sort.each do |gemspec|
+    gem File.basename(gemspec, ".gemspec"), path: File.dirname(gemspec)
+  end
 end
 
 group :development, :test do

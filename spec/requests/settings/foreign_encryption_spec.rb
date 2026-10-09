@@ -1,0 +1,54 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+# A site moved from another install without that install's keys (or an
+# install whose keys changed) holds values this one can't decrypt. They
+# still work where they're only compared by digest; the pages that show
+# them say so rather than failing.
+RSpec.describe "Values encrypted with another install's key", type: :request do
+  let(:admin) { create(:user) }
+
+  def foreign(text)
+    ActiveRecord::Encryption::Encryptor.new.encrypt(text, key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new("another install's key"))
+  end
+
+  # Written raw: update_columns would encrypt it again with this install's key.
+  def write_raw(model, column, value, id)
+    ActiveRecord::Base.connection.execute(model.sanitize_sql(["UPDATE #{model.table_name} SET #{column} = ? WHERE id = ?", value, id]))
+  end
+
+  before { sign_in_as admin }
+
+  it "shows the API token page, and says a token it can't read must be rotated to be shown" do
+    token = ApiToken.for(admin)
+    write_raw(ApiToken, :token, foreign("mbc_old"), token.id)
+
+    get settings_api_token_path
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("rotate it to get one you can copy")
+
+    post settings_api_token_reveal_path, as: :json
+    expect(response).to have_http_status(:gone)
+  end
+
+  it "shows the service tokens page with one it can't read" do
+    service = ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin)
+    write_raw(ServiceToken, :token, foreign("mbcs_old"), service.id)
+
+    get settings_service_tokens_path
+
+    expect(response).to have_http_status(:ok)
+    expect(service.reload.visible?).to be(false)
+  end
+
+  it "reads a setting's secrets it can't decrypt as not set" do
+    record = Setting.find_or_create_by!(key: "github")
+    write_raw(Setting, :secrets, foreign({token: "ghp_old"}.to_json), record.id)
+
+    expect(record.reload.secrets_hash).to eq({})
+
+    get settings_github_path
+    expect(response).to have_http_status(:ok)
+  end
+end

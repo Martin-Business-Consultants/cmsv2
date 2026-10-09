@@ -6,13 +6,16 @@ through `Cms::Plugins` (`lib/cms/plugins.rb`) and in-process content events.
 Remove its gem and the CMS runs as before. `engines/hello` is the reference;
 this guide walks through it.
 
-One plugin is bundled with the core, as the reference:
+One plugin comes with the core's code, as the reference, and only for
+working on the core: it's in the development and test bundle, so no install
+carries it.
 
 | Plugin | Key | Default | Holds |
 |---|---|---|---|
-| Hello (`engines/hello`) | `hello` | off | The reference plugin |
+| Hello (`engines/hello`) | `hello` | development and test only | The reference plugin |
 
-The others are installed from their own repositories (below):
+Every install gets the two default plugins, Forms and Media; the others are
+installed from their own repositories (below):
 
 | Plugin | Key | Default | Holds |
 |---|---|---|---|
@@ -32,8 +35,8 @@ The others are installed from their own repositories (below):
   it's required by name, so it may depend only on gems the core bundles, as
   a plugin built like `engines/hello` does. One the install already bundles
   (below) wins. `CMS_INSTALLED_PLUGINS=off` boots without them.
-- **Bundled** plugins ship with the core in `engines/<name>` and are part of
-  every install. Only `engines/hello` is, as the reference.
+- **Bundled** plugins ship with the core in `engines/<name>`. Only
+  `engines/hello` does, as the reference, and only in development and test.
 - **Installed** plugins live in `plugins/<name>` (ignored by git — they
   belong to the install, like its data), one repository each:
 

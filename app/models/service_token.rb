@@ -91,15 +91,24 @@ class ServiceToken < ApplicationRecord
 
   def revoked? = revoked_at.present?
 
-  def visible? = token.present?
+  # False for a token encrypted with another install's key (a site moved
+  # here without it): it works, it just can't be shown. Rotating fixes it.
+  def visible? = readable_token.present?
 
   # The plaintext, for someone who asked to see it — each look is recorded.
   def reveal
     track_event(:revealed, name: name)
-    token
+    readable_token
   end
 
   def masked = "#{prefix}#{"•" * 8}"
+
+  # The plaintext, or nil when this install's key can't read it.
+  def readable_token
+    token
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    nil
+  end
 
   def capabilities
     perms = role&.permissions || []

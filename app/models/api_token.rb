@@ -99,17 +99,25 @@ class ApiToken < ApplicationRecord
     plaintext
   end
 
-  # False for tokens minted before plaintext was stored — they work, they
+  # False for tokens minted before plaintext was stored, or encrypted with
+  # another install's key (a site moved here without it) — they work, they
   # just can't be shown. Rotating fixes it.
-  def visible? = token.present?
+  def visible? = readable_token.present?
 
   # The plaintext, for its owner asking to see it — each look is recorded.
   def reveal
     track_event(:revealed)
-    token
+    readable_token
   end
 
   def masked = "#{prefix}#{"•" * 8}"
+
+  # The plaintext, or nil when this install's key can't read it.
+  def readable_token
+    token
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    nil
+  end
 
   # Throttled write — `last_used_at` only updates once per `USE_THROTTLE`
   # window. Avoids hammering the DB for high-traffic API consumers.
