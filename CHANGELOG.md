@@ -39,6 +39,39 @@ out.
   `CMS_ALLOW_PRIVATE_WEBHOOKS=true`.
 - **A webhook delivery no longer keeps what the receiver answered**, only
   its status, timing and error. The bodies already stored are removed.
+### Fixed
+- **One page or entry that can't be published no longer holds up every
+  schedule.** The scheduler flips each record on its own: one that fails
+  validation has its schedule cleared and the failure recorded in the audit
+  log (`page.schedule_failed`, `entry.schedule_failed`, with why), one that
+  hits a passing error (the database busy) is left for the next minute, and
+  the rest go out either way; pages failing no longer stops entries. The run
+  fails afterwards, naming what was left, so Solid Queue keeps it. Two runs
+  at once flip and announce a record once.
+- **A deploy that fails keeps its changes for the next one.** A build or
+  purge used to clear the list of what changed before firing, so a failure
+  lost it; now it's cleared once every attempt succeeded, and only of what
+  went out. A deploy job run twice fires once, and a change scheduled while
+  one fires is no longer dropped.
+- **Settings written at the same moment no longer overwrite each other.**
+  `Setting.set` and `Setting.set_secret` read and write their row in one
+  transaction; `Setting.set` takes a block for a value worked out from the
+  current one (the deploy log, pending changes, a counter).
+- **Jobs retry when the database was busy** (SQLite's "database is locked",
+  a full connection pool), up to five times, and drop a job whose record was
+  deleted before it ran.
+- **Clearing a value this install's keys can't read is recorded.** Replacing
+  such a token or secret now writes `<model>.unreadable_value_cleared` to the
+  audit log with the ciphertext, so the right keys can still recover it if
+  the keys were only misconfigured, and logs an error.
+
+### Added
+- **Saving over someone else's change is refused, in the admin and the
+  API.** Pages, entries and globals have a `lock_version`. The admin's forms
+  send the one they opened and say so instead of overwriting; the API
+  answers reads and writes with `X-Lock-Version` and refuses a write that
+  sends an older `lock_version` with 409 (docs/agent-interface.md). A write
+  that sends none is applied as before.
 
 ## 1.5.4
 
