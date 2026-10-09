@@ -21,4 +21,23 @@ RSpec.describe Cms::Restart do
   ensure
     report&.rmtree
   end
+
+  # A Docker image says where its gems are in the environment (the
+  # Dockerfile's BUNDLE_PATH, BUNDLE_DEPLOYMENT, BUNDLE_WITHOUT). The restart
+  # starts on it, or its bin/rails finds none of them (Bundler::GemNotFound)
+  # and the plugin change that asked for it fails.
+  it "keeps the environment the install started with, Bundler's settings among them" do
+    image = ENV.to_h.merge("BUNDLE_PATH" => "/usr/local/bundle", "BUNDLE_DEPLOYMENT" => "1", "BUNDLE_WITHOUT" => "development:test")
+    allow(Bundler).to receive(:original_env).and_return(image)
+    started_with = nil
+    allow(Process).to receive(:spawn) { started_with = ENV.to_h.slice("BUNDLE_PATH", "BUNDLE_DEPLOYMENT", "BUNDLE_WITHOUT"); 4242 }
+    allow(Process).to receive(:detach)
+    report = Pathname(Dir.mktmpdir("restart"))
+
+    described_class.later(report: report)
+
+    expect(started_with).to eq("BUNDLE_PATH" => "/usr/local/bundle", "BUNDLE_DEPLOYMENT" => "1", "BUNDLE_WITHOUT" => "development:test")
+  ensure
+    report&.rmtree
+  end
 end

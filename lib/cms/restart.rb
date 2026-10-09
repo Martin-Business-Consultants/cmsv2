@@ -27,13 +27,16 @@ module Cms
     # say goes to the install's log (this process's stdout, the container's
     # in Docker) and to `report`/restart.log, and how it ended to
     # `report`/exit_status, so whoever asked can tell a restart that failed
-    # (a migration that broke) from one still coming (PluginChange).
+    # (a migration that broke) from one still coming (PluginChange). It starts
+    # on the environment this process started with, before Bundler: that
+    # keeps an image's own BUNDLE_PATH, BUNDLE_DEPLOYMENT and BUNDLE_WITHOUT
+    # (the Dockerfile's), without which its bin/rails finds no gems.
     def later(delay: 5, report: Rails.root.join("log"))
       FileUtils.mkdir_p(report)
       log, status = File.join(report, "restart.log"), File.join(report, "exit_status")
       FileUtils.rm_f(status)
       script = %(sleep #{Integer(delay)}; { bin/rails db:migrate && bin/rails restart; } 2>&1 | tee "$1"; echo "${PIPESTATUS[0]}" > "$2")
-      Bundler.with_unbundled_env do
+      Bundler.with_original_env do
         pid = Process.spawn("/bin/bash", "-c", script, "restart", log, status,
           chdir: Rails.root.to_s, pgroup: true, in: File::NULL, out: $stdout, err: [:child, :out])
         Process.detach(pid)

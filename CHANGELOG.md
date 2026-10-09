@@ -101,6 +101,12 @@ out.
   fictional lender.
 
 ### Fixed
+- **Installing, updating or removing a plugin from Settings › Plugins works
+  on a Docker install.** The restart after it started without the image's
+  `BUNDLE_PATH`, `BUNDLE_DEPLOYMENT` and `BUNDLE_WITHOUT`, so it found none
+  of the install's gems (`Bundler::GemNotFound`) and the change failed. It,
+  bin/update's run from Settings › Updates and `plugins:install` now start on
+  the environment the install started with.
 - **API search finds entries.** It answered 500 for any query, since the
   shared search index takes no loading scope.
 - **One page or entry that can't be published no longer holds up every

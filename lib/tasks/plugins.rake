@@ -118,11 +118,13 @@ namespace :plugins do
     system(*command, exception: true)
   end
 
-  # The Gemfile changed, so bundle and migrate in fresh processes. Puma's
-  # tmp_restart plugin picks up the touch; a Docker install rebuilds its image
-  # instead (the Dockerfile copies plugins/ in before bundling).
+  # The Gemfile changed, so bundle and migrate in fresh processes, on the
+  # environment this one started with (an install's own Bundler settings
+  # kept). Puma's tmp_restart plugin picks up the touch; a Docker install
+  # rebuilds its image instead (the Dockerfile copies plugins/ in before
+  # bundling).
   def apply_plugin_changes!
-    Bundler.with_unbundled_env do
+    Bundler.with_original_env do
       run! "bundle", "install"
       run! "bin/rails", "db:migrate"
       run! "bin/rails", "assets:precompile" if ENV["RAILS_ENV"] == "production"

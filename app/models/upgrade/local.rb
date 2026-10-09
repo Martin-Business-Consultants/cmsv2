@@ -20,7 +20,7 @@ class Upgrade::Local
   def start
     FileUtils.mkdir_p directory
     arguments = [@upgrade.tag, log.to_s, exit_status.to_s]
-    Bundler.with_unbundled_env do
+    Bundler.with_original_env do
       pid = Process.spawn("/bin/bash", "-c", %(bin/update "$1" > "$2" 2>&1; echo $? > "$3"), "update", *arguments,
         chdir: Rails.root.to_s, pgroup: true, in: File::NULL, out: File::NULL, err: File::NULL)
       Process.detach(pid)
