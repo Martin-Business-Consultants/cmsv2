@@ -69,6 +69,19 @@ RSpec.describe "Values encrypted with another install's key", type: :request do
     expect(Setting.secret("github", "token")).to eq("ghp_new")
   end
 
+  # The keys might only be misconfigured: what's cleared stays recoverable.
+  it "keeps what it clears in the audit log, where the right keys can still read it" do
+    record = Setting.find_or_create_by!(key: "github")
+    ciphertext = foreign({token: "ghp_old"}.to_json)
+    write_raw(Setting, :secrets, ciphertext, record.id)
+
+    Setting.set_secret("github", token: "ghp_new")
+
+    row = AuditLog.find_by!(action: "setting.unreadable_value_cleared")
+    expect(row.target).to eq(record)
+    expect(row.metadata).to include("attribute" => "secrets", "ciphertext" => ciphertext)
+  end
+
   it "shows the service tokens page with one it can't read" do
     service = ServiceToken.issue!(name: "PRODUCTION", role: Role.system_admin)
     write_raw(ServiceToken, :token, foreign("mbcs_old"), service.id)
