@@ -58,7 +58,28 @@ class ApplicationController < ActionController::Base
   end
 
   def perform_authentication
-    Current.session ||= Session.find_by_id(cookies.signed[:session_token])
+    Current.session ||= live_session
+  end
+
+  # The session the cookie names, unless it has ended (Session::LIFETIME,
+  # Session::IDLE_TIMEOUT), in which case it's deleted with its cookie.
+  def live_session
+    session = Session.find_by_id(cookies.signed[:session_token])
+    return session&.tap(&:seen!) unless session&.expired?
+
+    session.destroy
+    cookies.delete(:session_token)
+    nil
+  end
+
+  # Signs `user` in on this browser: a new Session, and its cookie — signed,
+  # HttpOnly, SameSite=Lax, Secure over HTTPS, and gone when the session ends.
+  def start_session_for(user)
+    user.sessions.create!.tap do |record|
+      cookies.signed[:session_token] = {
+        value: record.id, httponly: true, same_site: :lax, secure: request.ssl?, expires: record.expires_at
+      }
+    end
   end
 
   def set_current_request_details

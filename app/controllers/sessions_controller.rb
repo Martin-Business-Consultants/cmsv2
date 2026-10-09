@@ -91,8 +91,7 @@ class SessionsController < ApplicationController
   end
 
   def finalize_sign_in!(user, second_factor: nil)
-    @session = user.sessions.create!
-    cookies.signed.permanent[:session_token] = {value: @session.id, httponly: true}
+    @session = start_session_for(user)
     session.delete(PENDING_SECOND_FACTOR_KEY)
     session.delete(:pending_2fa_at)
 

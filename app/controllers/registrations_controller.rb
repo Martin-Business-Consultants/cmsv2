@@ -30,8 +30,7 @@ class RegistrationsController < ApplicationController
     @user = User.new(user_params.merge(role: Role.system_admin))
 
     if @user.save
-      session_record = @user.sessions.create!
-      cookies.signed.permanent[:session_token] = {value: session_record.id, httponly: true}
+      start_session_for(@user)
 
       UserMailer.with(user: @user).email_verification.deliver_later
       redirect_to pages_path, notice: "Welcome! You have signed up successfully"

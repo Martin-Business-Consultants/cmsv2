@@ -26,6 +26,7 @@ checkout with `bin/install`.
 | `CMS_VERSIONS_KEEP` | How many versions of each page and entry to keep (100); older ones are deleted nightly. |
 | `ASSUME_SSL` | `true` behind a proxy that terminates TLS (Cloudflare, a load balancer). |
 | `CMS_ALLOW_PRIVATE_WEBHOOKS` | `true` lets webhooks, build hooks and a site's purge URL point at private, loopback or link-local addresses — for an install whose receivers are on its own network. Off by default (on while developing). |
+| `CMS_FORCE_SSL` | `false` to serve the admin over plain HTTP. Otherwise, when `APP_PROTOCOL` is `https`, HTTP redirects to HTTPS (except `/up` and localhost), with Strict-Transport-Security and Secure cookies. Behind a proxy that forwards plain HTTP, set `ASSUME_SSL=true` too, or the redirect loops. |
 | `CMS_PLUGINS` | The install's plugins, for a Docker build (see Plugins below). |
 | `CMS_RELEASES_REPO`, `CMS_RELEASES_TOKEN` | Where the daily update check looks (default `Martin-Business-Consultants/cmsv2`), and a token if that repo is private. |
 | `CMS_UPDATE_CHECK` | `false` stops the daily check for a newer release. |

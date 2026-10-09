@@ -26,14 +26,19 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # config.assume_ssl = true
+  # ASSUME_SSL=true behind a proxy that terminates TLS and forwards plain HTTP
+  # (Cloudflare, a load balancer): every request is treated as HTTPS.
+  config.assume_ssl = ENV["ASSUME_SSL"] == "true"
 
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
-
-  # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  # HTTPS only: HTTP redirects to HTTPS, Strict-Transport-Security, Secure
+  # cookies. On whenever links are https (APP_PROTOCOL, the default);
+  # CMS_FORCE_SSL=false turns it off for an install served over plain HTTP.
+  # The health check (/up) and local addresses are never redirected, so
+  # kamal-proxy and a container on localhost still reach the app.
+  config.force_ssl = ENV.fetch("CMS_FORCE_SSL") { (ENV.fetch("APP_PROTOCOL", "https") == "https").to_s } == "true"
+  config.ssl_options = {
+    redirect: {exclude: ->(request) { request.path == "/up" || %w[localhost 127.0.0.1 ::1].include?(request.host) }}
+  }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [:request_id]

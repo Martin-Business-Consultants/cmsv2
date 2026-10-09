@@ -26,6 +26,11 @@ production:
     class: TrashPurgeJob
     queue: default
     schedule: every day at 3am
+  # Sign-in sessions that have ended (Session::LIFETIME, IDLE_TIMEOUT).
+  session_cleanup:
+    class: SessionCleanupJob
+    queue: default
+    schedule: every day at 3:30am
   # Every enabled plugin's nightly task (Cms::Plugins.nightly).
   plugins_nightly:
     class: PluginsNightlyJob

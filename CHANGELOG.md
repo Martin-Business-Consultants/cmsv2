@@ -120,6 +120,17 @@ out.
   `{"status", "error"}` shape, or as an HTML page. The bodies the API
   already answered (`not_found`, `invalid`, `forbidden` with its
   `capability`) are unchanged.
+- **Sign-in sessions end.** A session lasts 30 days from sign-in and ends
+  after 14 days unused; an ended one signs no one in, and a daily job
+  deletes it. Its cookie is HttpOnly, SameSite=Lax, Secure over HTTPS, and
+  expires with the session, where it used to last 20 years.
+- **The admin is HTTPS-only by default.** When `APP_PROTOCOL` is `https`
+  (the default), HTTP redirects to HTTPS, with Strict-Transport-Security
+  and Secure cookies; `/up` and localhost are never redirected.
+  `CMS_FORCE_SSL=false` turns it off. `ASSUME_SSL=true`, documented for
+  installs behind Cloudflare or a load balancer, now does what it says
+  (it was ignored). **Behind a proxy that forwards plain HTTP, set
+  `ASSUME_SSL=true` before updating**, or the redirect loops.
 
 ## 1.5.4
 
