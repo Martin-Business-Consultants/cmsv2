@@ -93,6 +93,76 @@ RSpec.describe ProcessScheduledPublishingJob do
     end
   end
 
+  describe "when a record can't be flipped" do
+    it "records why, clears its schedule and publishes the rest" do
+      broken = make_page(publish_at: 1.minute.ago)
+      broken.update_columns(title: "")
+      fine = make_page(publish_at: 1.minute.ago)
+
+      described_class.new.perform(now: Time.current)
+
+      expect(fine.reload.status).to eq("published")
+      expect(broken.reload).to have_attributes(status: "draft", publish_at: nil)
+      row = AuditLog.find_by!(action: "page.schedule_failed")
+      expect(row.target).to eq(broken)
+      expect(row.metadata).to include("path" => broken.path, "scheduled" => "publish")
+      expect(row.metadata["errors"].join).to match(/Title/)
+    end
+
+    it "records an entry's failure under its collection and slug" do
+      coll = make_collection
+      entry = make_entry(coll, status: "published", unpublish_at: 1.minute.ago)
+      entry.update_columns(title: "")
+
+      described_class.new.perform(now: Time.current)
+
+      expect(entry.reload).to have_attributes(status: "published", unpublish_at: nil)
+      expect(AuditLog.find_by!(action: "entry.schedule_failed").metadata)
+        .to include("collection" => coll.slug, "slug" => entry.slug, "scheduled" => "unpublish")
+    end
+
+    it "leaves a record that hit a passing error due, carries on, and fails the run naming it" do
+      busy = make_page(publish_at: 1.minute.ago)
+      fine = make_page(publish_at: 1.minute.ago)
+      allow_any_instance_of(Page).to receive(:with_lock).and_wrap_original do |original, *args, &block|
+        raise ActiveRecord::StatementTimeout, "database is locked" if original.receiver.id == busy.id
+
+        original.call(*args, &block)
+      end
+
+      expect { described_class.new.perform(now: Time.current) }
+        .to raise_error(described_class::Incomplete, /database is locked/)
+
+      expect(fine.reload.status).to eq("published")
+      expect(busy.reload).to have_attributes(status: "draft", publish_at: be_present)
+    end
+
+    it "still runs the entries when the pages fail" do
+      entry = make_entry(make_collection, publish_at: 1.minute.ago)
+      allow(Page).to receive(:publish_due).and_raise(ActiveRecord::StatementTimeout, "database is locked")
+
+      expect { described_class.new.perform(now: Time.current) }.to raise_error(described_class::Incomplete)
+
+      expect(entry.reload.status).to eq("published")
+    end
+  end
+
+  describe "two runs at once" do
+    it "flips a record once and announces it once" do
+      page = make_page(publish_at: 1.minute.ago)
+      stale = Page.find(page.id)
+      announced = 0
+      subscription = ActiveSupport::Notifications.subscribe("page.published.cms") { announced += 1 }
+
+      expect(page.publish_on_schedule).to be(true)
+      expect(stale.publish_on_schedule).to be(false)
+
+      expect(announced).to eq(1)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+  end
+
   describe "validations" do
     it "rejects unpublish_at before publish_at" do
       page = Page.new(

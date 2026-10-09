@@ -6,6 +6,7 @@
 # way.
 module CollectionEntry::Publishable
   extend ActiveSupport::Concern
+  include PublishesOnSchedule
 
   included do
     # What visitors see: published, and not waiting on a schedule (the
@@ -21,14 +22,6 @@ module CollectionEntry::Publishable
   end
 
   class_methods do
-    def publish_due(now = Time.current)
-      due_to_publish(now).find_each { it.publish_on_schedule(now) }
-    end
-
-    def unpublish_due(now = Time.current)
-      due_to_unpublish(now).find_each(&:unpublish_on_schedule)
-    end
-
     # Sets every entry of `collection` to `to`, all or nothing, and records one
     # event naming them. One save per entry (not update_all) so each fires the
     # webhook and debounced deploy a single edit does.
@@ -44,13 +37,8 @@ module CollectionEntry::Publishable
       (unpublish_at.present? && unpublish_at > Time.current && status == "published")
   end
 
-  def publish_on_schedule(now = Time.current)
-    update!(status: "published", published_at: published_at || now, publish_at: nil)
-  end
-
-  def unpublish_on_schedule
-    update!(status: "archived", unpublish_at: nil)
-  end
+  # What its schedule's events name it by (PublishesOnSchedule).
+  def schedule_particulars = {collection: collection&.slug, slug: slug}
 
   def track_creation
     track_event(:created, collection: collection.slug, slug: slug, status: status)
