@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.4.1
+
 ### Fixed
 - **Settings › API token, Service tokens and settings secrets no longer fail
   on values encrypted with another install's key** (a site moved here
