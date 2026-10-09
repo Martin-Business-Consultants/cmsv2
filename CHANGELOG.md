@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.6.1
+
 ### Fixed
 - **Email logos and admin links point at the CMS.** Form emails and
   collection event emails built the Branding logo's URL, and the "open in
