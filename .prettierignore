@@ -1,0 +1,7 @@
+.adonisjs
+node_modules
+build
+database/schema.ts
+pnpm-lock.yaml
+storage
+*.edge

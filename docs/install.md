@@ -1,307 +1,315 @@
-# Installing and updating the CMS
+# Installing LibrePublish in production
 
-One install serves one site: its own process, databases, uploaded files and
-secrets, reached at its own hostname. Everything the install stores lives in
-one data directory (`CMS_DATA_DIR`), so backing up that directory and the
-install's secrets backs up the site.
+LibrePublish is one Node.js process: the public site, the admin (`/admin`), the delivery API
+(`/api/v1`), the job queue and the scheduler all run in it. Data lives in one SQLite database and
+an uploads folder, both under `storage/`. Back up that folder and you have backed up the site.
 
-There are two ways to run one: Kamal (Docker, the default) or a plain
-checkout with `bin/install`.
+- [Requirements](#requirements)
+- [Docker](#docker)
+- [Plain Node.js with systemd](#plain-nodejs-with-systemd)
+- [HTTPS and reverse proxies](#https-and-reverse-proxies)
+- [Environment variables](#environment-variables)
+- [Backups and restore](#backups-and-restore)
+- [Updating](#updating)
+- [Health check](#health-check)
+- [Security headers](#security-headers)
+- [Webhooks](#webhooks)
+- [Jobs and recurring tasks](#jobs-and-recurring-tasks)
 
-## What an install is configured with
+## Requirements
 
-| Variable | What it is |
-|---|---|
-| `APP_HOST` | The address people and the API use (`acme.librepublish.com`). Links in email, the `cms` CLI and agent bootstraps are built from it. |
-| `SITE_KEY` | What the API calls the site — the `tenant` field of webhook envelopes, `/api/manifest` and device login, which integrations match on. Defaults to the first label of `APP_HOST`. Keep it when a site changes host. |
-| `CMS_DATA_DIR` | Databases (`production.sqlite3`, `_cache`, `_queue`, `_cable`), Active Storage files, and `backups/`. Default `storage/` in the app. |
-| `SECRET_KEY_BASE`, `AR_ENCRYPTION_PRIMARY_KEY`, `AR_ENCRYPTION_DETERMINISTIC_KEY`, `AR_ENCRYPTION_KEY_DERIVATION_SALT` | The install's secrets. Losing them loses the sessions and every encrypted value (API tokens, integration keys). Without the `AR_ENCRYPTION_*` keys, encryption keys derive from `SECRET_KEY_BASE`. |
-| `CMS_PREVIOUS_SECRET_KEY_BASE` | Another install's `secret_key_base`, so values it encrypted stay readable here: a site moved from the old shared deployment, or an install whose `SECRET_KEY_BASE` changed. This install still writes with its own keys; `bin/rails cms:reencrypt` rewrites everything with them, after which this can go. |
-| `SMTP_ADDRESS`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Outbound mail. The address, port and username default to Outsend's relay (`smtp.getoutsend.com`, 2587, `outsend`); the password is its API key. |
-| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | The sender of the install's own mail (password resets, invitations), and the fallback for the site's. Default `noreply@<APP_HOST>`, `LibrePublish`. |
-| `APP_PROTOCOL` | `https` (default) or `http`, for links. |
-| `CMS_BACKUP_KEEP`, `CMS_BACKUP_DIR` | How many data backups to keep (5) and where (`$CMS_DATA_DIR/backups`). |
-| `CMS_BACKUP_COMMAND` | Copies each nightly backup off the server: run with the archive's path as its last argument (`rclone copyto --s3-no-check-bucket`, `aws s3 cp … s3://bucket/`, `scp … host:dir/`). Unset, backups stay on the server. |
-| `CMS_BACKUP_NIGHTLY` | `false` stops the nightly backup, for an install whose host snapshots the volume instead. |
-| `CMS_VERSIONS_KEEP` | How many versions of each page and entry to keep (100); older ones are deleted nightly. |
-| `ASSUME_SSL` | `true` behind a proxy that terminates TLS (Cloudflare, a load balancer). |
-| `CMS_ALLOW_PRIVATE_WEBHOOKS` | `true` lets webhooks, build hooks and a site's purge URL point at private, loopback or link-local addresses — for an install whose receivers are on its own network. Off by default (on while developing). |
-| `CMS_FORCE_SSL` | `false` to serve the admin over plain HTTP. Otherwise, when `APP_PROTOCOL` is `https`, HTTP redirects to HTTPS (except `/up` and localhost), with Strict-Transport-Security and Secure cookies. Behind a proxy that forwards plain HTTP, set `ASSUME_SSL=true` too, or the redirect loops. |
-| `CMS_PLUGINS` | The install's plugins, for a Docker build (see Plugins below). |
-| `CMS_RELEASES_REPO`, `CMS_RELEASES_TOKEN` | Where the daily update check looks (default `Martin-Business-Consultants/cmsv2`), and a token if that repo is private. |
-| `CMS_UPDATE_CHECK` | `false` stops the daily check for a newer release. |
-| `CMS_UPDATES` | How Settings › Updates updates: `local` (bin/update), `github` (the Deploy workflow), `in_place` (a Docker install updating itself), `manual` (shows the command), or a plugin's strategy (docs/plugins.md). Worked out from the install when unset. |
-| `CMS_GITHUB_TOKEN`, `CMS_DEPLOY_DESTINATION`, `CMS_DEPLOY_WORKFLOW` | For a Docker install updating itself: a token that may start the Deploy workflow, the site's destination, and the workflow file (`deploy.yml`). |
+- Node.js 24 and pnpm (or Docker).
+- A reverse proxy that terminates TLS: Caddy, nginx, Traefik, a PaaS router or a load balancer.
+- An SMTP server for password resets, invitations and form notifications.
+- One persistent directory for `storage/`.
 
-## Kamal
+## Docker
 
-`config/deploy.yml` is what every install shares and names no server,
-hostname or secret; each site is a destination over it, and every Kamal
-command names one (`require_destination`).
+The repository's `Dockerfile` builds a production image. On every start the container runs the
+migrations, seeds anything missing (roles, block types, the first admin) and starts the server on
+port 3333.
 
-1. Copy `config/deploy.example-site.yml` to `config/deploy.<site>.yml` and set
-   its `service` (`cms-<site>`), server, `APP_HOST`, `SITE_KEY`, `proxy.host`
-   and volume (`cms_<site>_storage`). Several sites can share a server.
-2. Copy `.kamal/secrets.example-site` to `.kamal/secrets.<site>` and point it
-   at the site's secrets in your password manager. Neither file is
-   committed.
-3. `kamal setup -d <site>` once, then `kamal deploy -d <site>` for every
-   release.
+```sh
+docker build -t librepublish .
+node ace generate:key --show
+```
 
-## Another deploy tool
+Create `/srv/librepublish/.env` (see [Environment variables](#environment-variables)):
 
-A tool that runs Kamal for you can deploy the repository as it is: it reads
-`config/deploy.yml` and `.kamal/secrets-common`, and writes each site's
-destination from what you give it.
+```dotenv
+NODE_ENV=production
+TZ=UTC
+HOST=0.0.0.0
+PORT=3333
+LOG_LEVEL=info
+APP_KEY=<the key you generated>
+APP_URL=https://cms.example.com
+SESSION_DRIVER=cookie
+DRIVE_DISK=fs
+LIMITER_STORE=database
+MAIL_MAILER=smtp
+MAIL_FROM_NAME=Example
+MAIL_FROM_ADDRESS=cms@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=…
+SMTP_PASSWORD=…
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=<a long password, used only to create the first admin>
+```
 
-1. Name the app **for the site** (`cms-acme`). Kamal names the service, and
-   so the data volume (`cms-acme_storage`), after the app; two environments
-   of one app on the same server would share a volume, and with it every
-   database.
-2. Give it a destination's variables (`APP_HOST`, `SITE_KEY`,
-   `MAIL_FROM_ADDRESS`, `ASSUME_SSL=true` behind a TLS-terminating proxy) and
-   secrets (`SECRET_KEY_BASE`, the three `AR_ENCRYPTION_*` keys,
-   `SMTP_PASSWORD`, and `CMS_PLUGINS` if it has plugins).
-3. Settings › Updates then updates the install in place (Updating, below).
-   A plugin can add an update strategy that goes through the tool instead
-   (docs/plugins.md › Update strategies).
+Run it with a named volume for `storage/`:
 
-On boot the container backs up the data directory (`bin/rails cms:backup`),
-then runs `db:prepare`: an empty volume gets the site's starter roles, block
-types, settings and globals — never the demo seed — and an existing one is
-migrated. Open `https://<host>/sign_up` to create the owner, or
-`kamal app exec -d <site> 'bin/rails cms:bootstrap[owner@acme.com]'`, which
-prints the owner's password and the site's two machine tokens once.
+```sh
+docker run -d --name librepublish --restart unless-stopped \
+  -p 127.0.0.1:3333:3333 \
+  -v librepublish-storage:/app/storage \
+  --env-file /srv/librepublish/.env \
+  librepublish
+```
 
-## A plain install
+With Docker Compose and Caddy (automatic HTTPS):
 
-From a checkout of a release (`git clone … && git checkout v1.0.0`):
+```yaml
+services:
+  cms:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage:/app/storage
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3333/up').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-    bin/install --host acme.example.com [--site-key acme] [--data-dir /var/lib/cms] [--port 3000]
-                [--admin-email owner@acme.com --admin-name "Ann Owner"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    command: caddy reverse-proxy --from cms.example.com --to cms:3333
+    volumes:
+      - caddy:/data
 
-It installs the production gems, writes `.env` with fresh secrets (only if
-there isn't one; mode 600), prepares the database and compiles assets. With
-`--admin-email` it creates the owner and prints the password once; otherwise
-the first visit to `/sign_up` does. Run it with
-`set -a; . ./.env; set +a; bin/thrust bin/rails server`, or as a service with
-`config/cms.service`.
+volumes:
+  storage:
+  caddy:
+```
+
+Caddy sends `X-Forwarded-Proto: https`, which the CMS honours (see
+[HTTPS](#https-and-reverse-proxies)).
+
+## Plain Node.js with systemd
+
+```sh
+git clone <repository> /opt/librepublish && cd /opt/librepublish
+pnpm install --frozen-lockfile
+node ace build
+cd build
+pnpm install --prod --frozen-lockfile
+cp /srv/librepublish/.env .env
+ln -s /var/lib/librepublish storage
+node ace migration:run --force
+node ace db:seed
+```
+
+Keep `storage/` outside the build folder (here `/var/lib/librepublish`, owned by the service user)
+so a rebuild never touches it. `/etc/systemd/system/librepublish.service`:
+
+```ini
+[Unit]
+Description=LibrePublish CMS
+After=network.target
+
+[Service]
+Type=simple
+User=librepublish
+WorkingDirectory=/opt/librepublish/build
+EnvironmentFile=/srv/librepublish/.env
+ExecStartPre=/usr/bin/node ace migration:run --force
+ExecStart=/usr/bin/node bin/server.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/librepublish
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+systemctl daemon-reload
+systemctl enable --now librepublish
+journalctl -u librepublish -f
+```
+
+Put nginx or Caddy in front of `127.0.0.1:3333`. For nginx, forward the scheme:
+
+```nginx
+location / {
+  proxy_pass http://127.0.0.1:3333;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  client_max_body_size 50m;
+}
+```
+
+## HTTPS and reverse proxies
+
+In production the CMS redirects every plain-HTTP request to `https://` on the host in `APP_URL`
+(301 for GET and HEAD, 307 otherwise), sends HSTS, and marks cookies `Secure`. `/up` is never
+redirected, so health checks over HTTP keep working.
+
+A request counts as secure when any of these is true:
+
+- it arrived over TLS;
+- the proxy sent `X-Forwarded-Proto: https`;
+- `ASSUME_SSL=true` (use this when the proxy terminates TLS but does not send the header).
+
+Serving the CMS over plain HTTP in production (an internal network, say) needs both an `http://`
+`APP_URL` and `CMS_FORCE_SSL=false`; otherwise the server refuses to start.
+
+## Environment variables
+
+The server checks its environment when it boots. In production, a problem marked **required**
+stops it with a message naming the variable; warnings are logged.
+
+| Variable                                                                                                         | Default                                   | Meaning                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                                                                       |                                           | `production` on a live install.                                                                                                                                                     |
+| `APP_KEY`                                                                                                        |                                           | **Required**, 32+ characters (`node ace generate:key`). Encrypts sessions and stored secrets (webhook secrets); changing it signs everyone out and makes stored secrets unreadable. |
+| `APP_URL`                                                                                                        |                                           | **Required**. The public address, `https://` in production. Used for absolute links in emails, the sitemap, webhook payloads and HTTPS redirects.                                   |
+| `HOST`, `PORT`                                                                                                   |                                           | Where Node listens (`0.0.0.0` / `3333` in Docker).                                                                                                                                  |
+| `TZ`                                                                                                             |                                           | Use `UTC`. Timestamps are stored in UTC.                                                                                                                                            |
+| `LOG_LEVEL`                                                                                                      |                                           | `info`, `warn`, `debug`…                                                                                                                                                            |
+| `SESSION_DRIVER`                                                                                                 |                                           | `cookie` (recommended) or `database`. `memory` loses sessions on restart.                                                                                                           |
+| `LIMITER_STORE`                                                                                                  |                                           | `database` (recommended) or `memory`.                                                                                                                                               |
+| `DRIVE_DISK`                                                                                                     |                                           | `fs`: uploads in `storage/uploads`.                                                                                                                                                 |
+| `MAIL_MAILER`, `MAIL_FROM_NAME`, `MAIL_FROM_ADDRESS`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` |                                           | Outgoing email.                                                                                                                                                                     |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`                                                                                  | `admin@example.com` / `password1234`      | The first admin, created only when there are no users. Always set them in production.                                                                                               |
+| `SITE_KEY`                                                                                                       | first label of `APP_URL`'s host           | The `tenant` in webhook payloads. Keep it stable when the install moves to a new host.                                                                                              |
+| `CMS_FORCE_SSL`                                                                                                  | on when production and `APP_URL` is https | Redirect HTTP to HTTPS.                                                                                                                                                             |
+| `ASSUME_SSL`                                                                                                     | `false`                                   | Treat every request as HTTPS (TLS terminated by a proxy that sends no `X-Forwarded-Proto`).                                                                                         |
+| `CMS_CSP`                                                                                                        | `on`                                      | Content-Security-Policy: `on`, `report-only` or `off`.                                                                                                                              |
+| `CMS_ALLOW_PRIVATE_WEBHOOKS`                                                                                     | on in development, off in production      | Let webhooks and other outbound requests reach loopback, private and link-local addresses.                                                                                          |
+| `CMS_TRASH_DAYS`                                                                                                 | `30`                                      | Days an item stays in the trash before the nightly purge deletes it. `0` keeps the trash forever.                                                                                   |
+| `QUEUE_WORKER`                                                                                                   | `inline`                                  | `inline` runs the job worker inside the web process. `off` disables it; then run `node ace queue:work` as a separate service.                                                       |
+
+## Backups and restore
+
+Everything that matters is in `storage/`:
+
+- `storage/db.sqlite3`: content, users, settings, the job queue, webhooks and the audit log;
+- `storage/uploads/`: the media library and its image variants;
+- `storage/form_uploads/`: files attached to form submissions (Forms plugin).
+
+Plus your `.env` (above all `APP_KEY`). Keep a copy of it somewhere safe: without the same key,
+encrypted values in a restored database cannot be read.
+
+Copying a live SQLite file can catch it mid-write. Take a consistent snapshot with SQLite's online
+backup, then archive it with the uploads:
+
+```sh
+cd /var/lib/librepublish
+sqlite3 db.sqlite3 ".backup '/backups/db-$(date +%F).sqlite3'"
+tar -czf /backups/uploads-$(date +%F).tar.gz uploads form_uploads
+```
+
+In Docker:
+
+```sh
+docker exec librepublish node -e "
+  const Database = require('better-sqlite3');
+  new Database('storage/db.sqlite3').backup('storage/backup.sqlite3').then(() => console.log('ok'))"
+docker cp librepublish:/app/storage/backup.sqlite3 ./db-$(date +%F).sqlite3
+docker run --rm -v librepublish-storage:/s -v "$PWD":/out alpine \
+  tar -czf /out/uploads-$(date +%F).tar.gz -C /s uploads form_uploads
+```
+
+Run it nightly (cron or a systemd timer), keep several generations, and copy them off the server.
+Test a restore now and then.
+
+To restore: stop the server, put the database back as `storage/db.sqlite3` (remove any
+`db.sqlite3-wal` and `db.sqlite3-shm` beside it), unpack the uploads into `storage/`, start the
+server with the same `APP_KEY`. The migrations bring an older backup up to date on boot.
 
 ## Updating
 
-A release is a `vX.Y.Z` tag. The install checks for a newer one daily, and
-Settings › Updates shows it with its notes and an **Update** button. The
-button works one of four ways, depending on how the install runs
-(`CMS_UPDATES` forces one):
+1. Take a backup (above).
+2. Docker: `git pull && docker build -t librepublish . && docker rm -f librepublish` and run it again
+   with the same volume and env file. systemd: `git pull`, rebuild as in the install steps, then
+   `systemctl restart librepublish` (`ExecStartPre` runs the migrations).
+3. Check `/up` and the admin. If something is wrong, roll back to the previous image or build and
+   restore the backup taken in step 1.
 
-- **A Docker install** (Kamal or another deploy tool, with none of the
-  others set up) updates itself in place, the way WordPress does. Each release carries
-  a bundle for amd64 and arm64 (the Dockerfile's `bundle` stage: the app,
-  its gems, compiled assets, the default plugins and the Ruby they run on),
-  built by `.github/workflows/release.yml` in the minutes after it's
-  published. The button downloads the one for this machine into
-  `$CMS_DATA_DIR/releases/vX.Y.Z`, checks its checksum, points
-  `releases/current` at it and restarts the container, which is unavailable
-  for a few seconds. On boot `bin/docker-entrypoint` runs whichever is
-  newer, the image or `releases/current`, backing up and migrating as
-  usual; deploying a newer image takes over again. It relies on the
-  container's restart policy (Kamal's `unless-stopped`). Only a release that needs other system packages or
-  Debian (`CMS_BASE` in the Dockerfile) needs a new image: the update then
-  deploys it through a strategy that can (GitHub's, or a plugin's) if the
-  install has one, or says how.
-  Plugins installed from Settings › Plugins live in the data volume and
-  carry over; a plugin the image carries from `CMS_PLUGINS` that isn't a
-  default one isn't in the bundle, so the update refuses rather than drop
-  it (install it from Settings › Plugins instead). An install on an image
-  older than 1.4.0 deploys once to get this. `kamal app exec` opens a shell
-  in the image's copy (`/rails`), not the running release.
+## Health check
 
-- **A plain install** (a checkout with a `.env`) runs `bin/update <tag>` in
-  the background: back up the data directory, fetch and check out the
-  release, bundle, migrate, compile assets, restart Puma. Its output goes to
-  `$CMS_DATA_DIR/updates/<n>/update.log`.
-- **A plugin's strategy** (a deploy tool's, say) updates the tool's way
-  (docs/plugins.md › Update strategies).
-- **A Kamal install** starts the repository's **Deploy** workflow
-  (`.github/workflows/deploy.yml`), which runs `kamal deploy -d <site>` on
-  GitHub. Set `CMS_GITHUB_TOKEN` (a fine-grained token on the repository:
-  Contents read, Actions read and write) and `CMS_DEPLOY_DESTINATION`. On
-  GitHub, make an environment named for the site holding
-  `DEPLOY_DESTINATION_YML` (its `config/deploy.<site>.yml`),
-  `SSH_PRIVATE_KEY` and the secrets its destination names.
+`GET /up` answers `200 {"status":"ok"}` when the app can query its database and
+`503 {"status":"unavailable"}` when it cannot. It is never cached, never redirected to HTTPS and
+needs no authentication; point your load balancer, container healthcheck or uptime monitor at it.
 
-The page follows the update and says when the install runs the new version,
-or why it failed; until then the old version keeps running. Without any of
-these, it shows the command. By hand:
+## Security headers
 
-    bin/update             # the code that's checked out (after your own git pull)
-    bin/update v1.1.0      # fetch and check out that release first
-    kamal deploy -d <site> # a Kamal install, from a checkout of the release
+Every page carries:
 
-`bin/update` stops at the first step that fails (under systemd, restart with
-`sudo systemctl restart cms`).
+- `Content-Security-Policy` with a per-request nonce. Scripts run only from the CMS itself, from
+  Cloudflare Turnstile and Google reCAPTCHA (form spam protection), and from the `https://`
+  origins of scripts pasted into **Settings › Head scripts** (inline scripts there get the nonce
+  automatically). Styles and fonts may come from Google Fonts; images and media from any https
+  URL. If a third-party script you add is blocked, the browser console says which origin; add its
+  loader to Head scripts, or set `CMS_CSP=report-only` while you investigate.
+- `Strict-Transport-Security` (180 days), `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`.
+- Uploaded SVG, HTML, XML and JavaScript files are served sandboxed (`CSP: sandbox`), and the
+  last three as downloads.
 
-Migrations have to be safe on a live install and on an older version still
-running beside a newer database: add columns and tables in one release, and
-remove or rename them only in a later one, once nothing reads them.
+## Webhooks
 
-## Backups and restoring
+Tools › Webhooks posts signed JSON to other systems when content changes. Each request carries
+`User-Agent: librepublish-webhooks/1` and `X-CMS-Signature: sha256=<hex HMAC-SHA256 of the raw
+body keyed with the webhook's secret>`, connects within 5 s, must finish within 10 s and never
+follows redirects. Failed deliveries (network errors, timeouts, 408, 429 and 5xx answers) are
+retried three times with exponential backoff (about 10 s, 30 s and 90 s). Webhook URLs that
+resolve to private or loopback addresses are refused unless `CMS_ALLOW_PRIVATE_WEBHOOKS=true`.
 
-`bin/rails cms:backup` writes `backups/cms-data-<time>.tar.gz` in the data
-directory: every database (copied with SQLite's online backup, so it's
-consistent while the app runs, and checked with `PRAGMA quick_check` before
-it's archived) and every uploaded file, keeping the newest five. bin/update
-and a container boot that will migrate take one, and a migration doesn't run
-if it fails. One is also taken every night at 2am (`CMS_BACKUP_NIGHTLY=false`
-turns that off), and handed to `CMS_BACKUP_COMMAND` to copy off the server
-when one is set; a failed copy fails the job. Tools › Backup lists them for
-anyone with `tools:use` to download. Keep the install's secrets with them — a
-backup without its `SECRET_KEY_BASE` can't decrypt its tokens.
+The envelope is `{event, tenant, delivered_at, data}`. Events: `page.published`, `page.updated`,
+`page.unpublished`, `page.deleted`, `entry.published`, `entry.updated`, `entry.unpublished`,
+`entry.deleted`, `global.updated`, plus the events plugins add (Forms: `submission.created`).
 
-To restore: stop the app, move the data directory aside, unpack the archive
-into an empty one (`tar -xzf cms-data-….tar.gz -C "$CMS_DATA_DIR"`), start the
-app. Tools › Backup's download is a different thing: the primary database
-and the uploaded files as one portable `.tar.gz`, with a manifest naming any
-file that was missing.
+Verify a delivery in Node:
 
-## Releasing
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
-Add notes under `## Unreleased` in `CHANGELOG.md` as you go, then from a clean
-`main`:
+const expected = 'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex')
+const valid =
+  expected.length === signature.length &&
+  timingSafeEqual(Buffer.from(expected), Buffer.from(signature))
+```
 
-    bin/release 1.1.0
+## Jobs and recurring tasks
 
-It moves the Unreleased notes under `## 1.1.0`, writes `VERSION`, commits,
-tags `v1.1.0` and pushes. `.github/workflows/release.yml` publishes the GitHub
-release with that section as its notes, which is what every install's update
-check reads.
+The queue lives in the SQLite database and its worker runs inside the web process (see
+`QUEUE_WORKER`). The scheduler queues:
 
-## Plugins
+| Task                                            | When         |
+| ----------------------------------------------- | ------------ |
+| Scheduled publishing and unpublishing           | every minute |
+| Plugin minutely tasks                           | every minute |
+| Plugin nightly tasks                            | 01:00        |
+| Trash purge (items older than `CMS_TRASH_DAYS`) | 03:00        |
+| Session cleanup                                 | hourly       |
 
-The core bundles only the reference plugin (`engines/hello`). The rest —
-Forms and Commerce among them — are git repositories, each switched on in
-Settings › Plugins once it's in. Every install gets the default plugins
-(`config/default_plugins.yml`: Forms and Media) at setup — `bin/install` and the Docker
-build fetch them. A plain install adds them with
-`bin/rails "plugins:install[url,ref]"` (docs/plugins.md). A Docker install
-clones its repository fresh for every build, so it lists them instead, in the
-`CMS_PLUGINS` builder secret, and the image build fetches them
-(`bin/fetch-plugins`) before bundling:
-
-    CMS_PLUGINS="https://github.com/org/cms-seo#v1.2.0 https://x-access-token:TOKEN@github.com/org/private-thing"
-
-Each is a git URL with an optional `#tag` or branch, separated by spaces,
-commas or newlines, on top of the defaults. `-forms` leaves a default out,
-`none` installs nothing at all, and `default` means the defaults alone (for
-a host that won't keep an empty secret). It is a secret so a
-private plugin's URL can carry a token without it reaching the image. Set it
-in `.kamal/secrets.<site>`, in your deploy tool's secrets, or as a GitHub environment
-secret for the Deploy workflow, then deploy.
-
-## Rebuilding the public site on publish
-
-With Settings › Deploy set to GitHub, publishing sends the site repo a
-`repository_dispatch` event of type `cms-publish`. The repo needs a workflow
-that listens for it: copy `docs/cms-publish.yml` into the site's
-`.github/workflows/`, set its `CMS_BASE_URL` and
-`CMS_API_TOKEN` (the read-only Production site token) repository secrets, and
-replace its placeholder deploy step with the host's (Cloudflare Pages,
-Netlify and GitHub Pages are sketched in comments). The GitHub token in
-Settings › GitHub needs `contents: write` on that repo to send the event.
-
-The dispatch's `client_payload` is `{reason, site, changes}`: every content
-change in the debounce window (at most 50, then `truncated: true`), each
-`{event, kind, id, path, locale, tags}`. With Cloudflare, pick **Cloudflare
-(Pages or Workers Builds deploy hook)** in Settings › Deploy and paste the
-deploy hook URL instead.
-
-### Static or on demand
-
-The site's build tells the CMS how it renders (`POST /api/frontend/builds`
-with `render`: `static`, `server` or `hybrid`, and `webhook_url`, the Astro
-integration's `/_cms/webhook`). Publishing then:
-
-- **static** (or not yet reported): rebuilds through the deploy provider.
-- **server**: sends a cache purge instead of rebuilding. "Deploy now" still
-  rebuilds, and purges everything.
-- **hybrid**: rebuilds (for the prerendered routes) and purges.
-
-The first report of `server` or `hybrid`, and any later change to how the
-site renders or to its `webhook_url`, waits in Settings › Deploy › The site
-for someone with `settings:write` to approve it (or `POST
-/api/frontend/delivery_approval`): the site builds with a read-only token, and
-that token shouldn't be able to stop rebuilds or send the signed purges
-somewhere else. A static site needs nothing approved.
-
-A purge is a `POST` to the webhook, signed like webhooks are:
-
-    X-CMS-Event: cms.purge
-    X-CMS-Signature: sha256=<HMAC-SHA256 of the body, with the purge secret>
-    {"event": "cms.purge", "reason": "page.published", "site": "acme", "all": false,
-     "tags": ["page:about", "pages", "sitemap"], "changes": [{...}], "sent_at": "..."}
-
-The secret is in Settings › Deploy › The site (reveal, rotate); give it to
-the site as `CMS_WEBHOOK_SECRET`. The cache tags are the CMS's one
-vocabulary: `page:<path>` (`page:` is the home page), `entry:<collection>/<slug>`,
-`collection:<slug>`, `global:<slug>`, `pages`, `sitemap`, `redirects`.
-
-## Moving a site from the shared deployment
-
-The old deployment kept one SQLite database per tenant
-(`storage/production/<tenant>/main.sqlite3`), Active Storage keys prefixed
-`<tenant>/`, and the files under `storage/<tenant>/`. One site moves into its
-own, fresh install with
-
-    bin/rails "cms:import_tenant[PATH]"
-
-run on the new install (on Kamal, `kamal app exec -d <site> -i 'bin/rails …'`
-with PATH on the volume). PATH is a directory holding copies of:
-
-| | |
-|---|---|
-| `main.sqlite3` (and `-wal`, `-shm` if there are any) | The tenant's database. Required. |
-| `global.sqlite3` | The old global database — where the owner's email comes from. Optional. |
-| `files/` | The tenant's `storage/<tenant>/` directory (also found as `PATH/<tenant>/` or `PATH/storage/<tenant>/`). |
-
-Or PATH is the old deployment's backup archive, which holds all three: the
-database, every file, and (in its manifest) the tenant and its owner. Take it
-from the old site's Tools › Backup, with `cms backup > site.tar.gz`, or, for a
-site whose media is too big to pull through a request, on the old server with
-`bin/rails "tenants:backup[<tenant>]"` (it prints where it wrote it). Then
-
-    bin/rails "cms:import_tenant[cms-backup-<tenant>-<time>.tar.gz]"
-
-A blob whose file the old deployment couldn't find is named in the archive's
-manifest, and reported as missing by the import.
-
-The task copies the database and checkpoints the copy (it never writes to
-PATH), puts it in place of the install's database (the one it replaces stays
-beside it as `production.sqlite3.before-import-<time>`), runs the migrations
-it's behind on, strips the `<tenant>/` prefix from blob keys, copies each file
-to where this install looks for it and checks its checksum, and gives the old
-owner the Admin role. Then it reads every encrypted value and names the
-columns it couldn't decrypt, and prints a summary: migrations run, blobs
-copied or missing, the owner, and a count of each table.
-
-| Variable | |
-|---|---|
-| `DRY_RUN=1` | Say what would happen and change nothing. |
-| `FORCE=1` | Import into an install that already has users (replacing its database). Without it the task refuses. Re-running with it starts again from PATH, so it lands the same. |
-| `TENANT` | The old subdomain, if it can't be told from the blob keys or the global database. |
-| `SITE_KEY` | Defaults to the tenant. |
-| `FILES` | The files directory, if it isn't in one of the places above. |
-
-Before and after:
-
-- Give the install `CMS_PREVIOUS_SECRET_KEY_BASE`: the old deployment's
-  `secret_key_base` (in its Rails credentials: `bin/rails credentials:show`
-  in its checkout), so the API tokens, service tokens and integration keys
-  it encrypted stay readable here. The install keeps its own
-  `SECRET_KEY_BASE` and keys and writes with them. The task warns about any
-  value it can't read. Once the site runs here, `bin/rails cms:reencrypt`
-  rewrites them all with this install's keys, and the variable can go. (A
-  value nothing can read can only be re-entered, or the token rotated.)
-- Set `SITE_KEY` to the old subdomain and keep `<sub>.librepublish.com` as
-  `APP_HOST` (the task prints both), so existing tokens, CLI profiles,
-  integrations and the Astro site keep working.
-- Drain the old deployment's job queue before switching the hostname over.
+Times follow the server's time zone (`TZ`).

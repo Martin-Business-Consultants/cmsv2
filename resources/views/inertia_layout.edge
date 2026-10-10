@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="{{ lang || 'en' }}" data-default-theme="{{ defaultAppearance || 'system' }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @if(!page.component.startsWith('site/') && !page.component.includes('/site/'))
+      <meta name="color-scheme" content="light dark" />
+      <script nonce="{{ cspNonce || '' }}">
+        (function () {
+          var root = document.documentElement
+          var media = window.matchMedia('(prefers-color-scheme: dark)')
+          function apply() {
+            var stored = null
+            try {
+              stored = localStorage.getItem('appearance')
+            } catch (error) {}
+            var fallback = root.dataset.defaultTheme
+            var theme =
+              stored === 'light' || stored === 'dark' || stored === 'system'
+                ? stored
+                : fallback === 'light' || fallback === 'dark'
+                  ? fallback
+                  : 'system'
+            var dark = theme === 'dark' || (theme === 'system' && media.matches)
+            root.classList.toggle('dark', dark)
+            root.style.colorScheme = dark ? 'dark' : 'light'
+            root.dataset.appearance = theme
+          }
+          apply()
+          media.addEventListener('change', apply)
+          window.addEventListener('storage', function (event) {
+            if (event.key === 'appearance') apply()
+          })
+          window.applyAppearance = apply
+        })()
+      </script>
+    @end
+    @viteReactRefresh({ nonce: cspNonce })
+    @vite(['inertia/app.tsx'], { nonce: cspNonce })
+    {{{ withNonce(brandingHead || '', cspNonce) }}}
+    @inertiaHead()
+    @if(headScripts)
+      {{{ withNonce(headScripts, cspNonce) }}}
+    @end
+    @stack('dumper')
+  </head>
+  <body class="antialiased">
+    @inertia()
+  </body>
+</html>

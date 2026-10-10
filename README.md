@@ -1,32 +1,56 @@
-# LibrePublish CMS
+# LibrePublish
 
-A headless CMS built on Rails: an admin that edits like WordPress, a JSON API
-that does everything the admin does, a `cms` CLI and MCP surface for AI
-agents, and plugins. One install is one site, in one container, with SQLite
-for everything. Sites render the content with any frontend, starting with
-Astro: the `@librepublish/astro` integration
-([libre-cms-astro](https://github.com/Martin-Business-Consultants/libre-cms-astro)) reads
-the delivery API (`/api/v1`, docs/delivery-api.md).
+A WordPress-style CMS and website in one app: the public site renders at `/`, the admin lives at
+`/admin`, and a read-only delivery API serves headless frontends at `/api/v1`.
+
+Built with AdonisJS 7, Inertia, React, Tailwind CSS and shadcn/ui. One container, one SQLite
+database, uploads on local disk.
+
+## Run it locally
 
 ```sh
-mise install      # ruby 4.0.6
-bin/setup         # gems, databases, seeds, then bin/dev
-                  # http://localhost:3000, sign in as alice@site.test / password1234
-bin/ci            # rubocop, herb lint, bundler-audit, brakeman, rspec, seeds
+pnpm install
+cp .env.example .env
+node ace generate:key
+node ace migration:run
+node ace db:seed
+pnpm dev
 ```
 
-- `docs/install.md`: running your own, with Kamal (or a tool that runs it) or as a plain
-  checkout, and updating it.
-- `docs/plugins.md`: extending it. `engines/hello` is the reference plugin;
-  Forms and Commerce are installed from their own repositories.
-- `docs/vision.md`: what it is for and how it is put together.
-- `docs/agent-interface.md`: the API, CLI and MCP surface agents use.
-- `CHANGELOG.md`: every release.
+Open http://localhost:3333 for the site and http://localhost:3333/admin for the admin
+(`admin@example.com` / `password1234`, change it under Account).
 
-Releases are `vX.Y.Z` tags at
-https://github.com/Martin-Business-Consultants/cmsv2/releases; an install
-offers each one in Settings › Updates.
+## What's inside
 
-Licensed under the Functional Source License (FSL-1.1-MIT, `LICENSE.md`): use
-it, change it and run it for yourself or your clients, but not to offer a
-competing product. Each release becomes MIT two years after it's published.
+- **Pages** built from blocks, nested by path, with drafts, scheduled publishing, versions,
+  previews and a trash.
+- **Collections** of entries (a blog, team members, locations…) with their own fields and public
+  URLs.
+- **Globals** for site-wide content such as navigation and contact details.
+- **Block types** you define in the admin; the theme renders them.
+- **Media library** with responsive WebP variants.
+- **Forms** with Cloudflare Turnstile, a honeypot, email notifications and CSV export.
+- **Redirects**, `sitemap.xml` and `robots.txt`.
+- **Users, roles and capabilities**, API clients with access tokens, and an audit log.
+
+## The theme
+
+The public site is server-rendered React in `inertia/site`. Each block type maps to a component in
+the theme's block registry; add a block type in the admin, then a component for it here.
+
+## Delivery API
+
+Create an API client and token under System → API clients, then:
+
+```sh
+curl -H "Authorization: Bearer <token>" http://localhost:3333/api/v1/pages
+```
+
+## Deploy
+
+```sh
+docker build -t librepublish .
+docker run -p 3333:3333 -v librepublish:/app/storage --env-file .env librepublish
+```
+
+Everything that needs backing up lives in `storage/`: the database and the uploads.

@@ -1,0 +1,27 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import adonisjs from '@adonisjs/vite/client'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+    adonisjs({
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'],
+      reload: ['resources/views/**/*.edge'],
+    }),
+  ],
+  resolve: {
+    alias: {
+      '~/': `${import.meta.dirname}/inertia/`,
+      '@generated': `${import.meta.dirname}/.adonisjs/client/`,
+    },
+  },
+  server: {
+    watch: {
+      ignored: ['**/storage/**', '**/tmp/**'],
+    },
+  },
+})
